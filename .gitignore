@@ -34,8 +34,17 @@ nosetests.xml
 .project
 .pydevproject
 
+# PyCharm
+.idea
+
+# Generated files
+*.[oa]
+*.py[co]
+*__pycache__
+*.rbc
+static-collected/*
+
 # Cookiecutter
-*.pyc
 *.db
 *~
 .*
