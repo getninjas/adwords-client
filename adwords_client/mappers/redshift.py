@@ -70,7 +70,6 @@ class RedshiftMapper:
         except ValueError:
             logger.error('Sqlite table {} does not exist...'.format(from_table))
 
-
     def upload_file_to_bucket(self, from_file, dry_run=False):
         logger.debug('Uploading {} to S3 (dry_run={})...'.format(from_file, str(dry_run)))
         remote_temp = os.path.basename(from_file)

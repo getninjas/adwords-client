@@ -503,12 +503,16 @@ class AdWords:
             sleep_time *= 2
             accounts = self.update_log_tables(bjs, batchlog_table)
 
+    def load_table(self, table_name):
+        logger.info('Getting operations data...')
+        query = 'select * from {}'.format(table_name)
+        data = pd.read_sql_query(query, self.engine)
+        return data
+
     def _setup_operations(self, table_name, batchlog_table):
         self.create_batch_operation_log(batchlog_table)
-        logger.info('Getting operations data...')
         bjs = self.service('BatchJobService')
-        query = 'select * from {}'.format(table_name)
-        accounts = pd.read_sql_query(query, self.engine)
+        accounts = self.load_table(table_name)
         return bjs, accounts
 
     def _execute_operations(self, bjs, operations, batchlog_table, operation_builder):
