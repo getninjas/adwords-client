@@ -22,6 +22,7 @@ REPORTS_DEFINITIONS = {
 
 
 def get_report_csv(report_type):
+    # TODO: download the csv version associated with the version of the api
     csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
                             REPORTS_DEFINITIONS[report_type])
     result = requests.get(csv_url)
