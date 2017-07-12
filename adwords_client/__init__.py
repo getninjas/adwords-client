@@ -1,1 +1,2 @@
-__version__ = '0.1'
+__version__ = '17.07'   # Date based versioning
+# See: https://packaging.python.org/tutorials/distributing-packages/#date-based-versioning
