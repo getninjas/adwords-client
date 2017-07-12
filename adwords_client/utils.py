@@ -6,6 +6,12 @@ double_regex = re.compile(r'[^\d.]+')
 
 
 def process_double(x):
+    """
+    Transform a string having a Double to a python Float
+
+    >>> process_double('123.456')
+    123.456
+    """
     x = double_regex.sub('', x)
     return float(x) if x else 0.0
 
