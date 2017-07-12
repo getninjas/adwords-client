@@ -90,6 +90,8 @@ setup(
         'boto3>=1.4.4',
         'sqlalchemy-redshift>=0.5.0',
     ],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
