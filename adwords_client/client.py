@@ -545,10 +545,12 @@ class AdWords:
                         utils.cents_as_money(internal_operation.new_bid)
                     )
                 else:
-                    yield operations.add_adgroup_cpc_bid_adjustment_operation(int(internal_operation.campaign_id),
-                                                                              int(internal_operation.adgroup_id),
-                                                                              utils.cents_as_money(
-                                                                                  internal_operation.new_bid))
+                    yield operations.add_adgroup_cpc_bid_adjustment_operation(
+                        int(internal_operation.campaign_id),
+                        int(internal_operation.adgroup_id),
+                        utils.cents_as_money(
+                            internal_operation.new_bid)
+                    )
             else:
                 yield None
 
