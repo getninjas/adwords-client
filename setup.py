@@ -8,11 +8,11 @@ from setuptools import setup
 
 name = 'adwords-client'
 package = 'adwords_client'
-description = 'AdWords Client'
+description = 'AdWords Client with read/write support'
 url = 'https://github.com/getninjas/adwords-client'
 author = 'Samuel Martins Barbosa Neto et al.'
 author_email = 'sam@getninjas.com.br'
-license = 'Copyright'
+license = 'APACHE'
 
 
 def get_version(package):
@@ -90,15 +90,21 @@ setup(
         'boto3>=1.4.4',
         'sqlalchemy-redshift>=0.5.0',
     ],
+    python_requires='~=3.5',
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest', 'pytest-cov'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
+        'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Natural Language :: English',
+        'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
-        'Topic :: Internet :: WWW/HTTP',
-    ]
+        'Topic :: Internet',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
 )
