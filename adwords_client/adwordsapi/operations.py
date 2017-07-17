@@ -64,15 +64,93 @@ def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
     yield set_campaign_budget(budget_id, campaign_id)
 
 
-def add_adgroup(self, campaign_id, adgroup_id, operator):
+def add_ad(adgroup_id, ad_dict):
     operation = {
-        'xsi_type': 'AdGroupOperation',
+        'xsi_type': 'AdGroupAdOperation',
         'operand': {
-            'xsi_type': 'AdGroup',
-            'campaignId': campaign_id,
-            'id': adgroup_id,
+            'xsi_type': 'AdGroupAd',
+            'adGroupId': adgroup_id,
+            'ad': ad_dict,
+            'status': 'PAUSED',
+            # TODO: 'labels': [],
         },
-        'operator': operator,
+        'operator': 'ADD'
+    }
+    return operation
+
+
+def build_ad(headline1, headline2, description, urls, ad_id=None, adtype='ExpandedTextAd'):
+    result = {
+        'xsi_type': adtype,
+        'headlinePart1': headline1,
+        'headlinePart2': headline2,
+        'description': description,
+        'finalUrls': list(urls),
+    }
+    if ad_id:
+        result['id'] = ad_id
+    return result
+
+
+def add_restriction(adgroup_id, restriction_dict, effect='SHOW'):
+    """
+    A restriction to display an Ad. For example, a Keyword dict.
+    If 'effect' is "HIDE", will enforce the Ad to NOT be displayed
+    when the restriction got matched.
+    """
+    if effect.upper() == 'SHOW':
+        operand_type = 'BiddableAdGroupCriterion'
+    elif effect.upper() == 'HIDE':
+        operand_type = 'NegativeAdGroupCriterion'
+    else:
+        raise NotImplementedError("Desired 'effect' was not recognized")
+
+    operation = {
+        'xsi_type': 'AdGroupCriterionOperation',
+        'operand': {
+            'xsi_type': operand_type,
+            'adGroupId': adgroup_id,
+            'criterion': restriction_dict,
+        },
+        'operator': 'ADD'
+    }
+    return operation
+
+
+def build_keyword(text, keyword_id=None, match='BROAD'):
+    result = {
+        'xsi_type': 'Keyword',
+        'text': text,
+        'matchType': 'BROAD',  # Only EXACT, PHRASE or BROAD
+    }
+    if keyword_id:
+        result['id'] = keyword_id
+    return result
+
+
+def add_campaign(campaign_id, campaign_name):
+    operation = {
+        'xsi_type': 'CampaignOperation',
+        'operator': 'ADD',
+        'operand': {
+            'xsi_type': 'Campaign',
+            'id': campaign_id,
+            'name': campaign_name,
+
+            ## From: https://developers.google.com/adwords/api/docs/samples/python/campaign-management#add-complete-campaigns-using-batch-jobs
+            # 'advertisingChannelType': 'SEARCH',
+            # Recommendation: Set the campaign to PAUSED when creating it to
+            # stop the ads from immediately serving. Set to ENABLED once
+            # you've added targeting and the ads are ready to serve.
+            'status': 'PAUSED',
+            # Note that only the budgetId is required
+            # 'budget': {
+            #     'budgetId': budget_id
+            # },
+            # 'biddingStrategyConfiguration': {
+            #     'biddingStrategyType': 'MANUAL_CPC'
+            # }
+        },
     }
     return operation
 
@@ -206,7 +284,7 @@ def add_new_keyword_operation(adgroup_id,
     return new_keyword_operation
 
 
-def add_adgroup_operation(campaign_id, adgroup_id, operator):
+def add_adgroup(campaign_id, adgroup_id, operator='ADD'):
     operation = {
         'xsi_type': 'AdGroupOperation',
         'operand': {
@@ -222,9 +300,9 @@ def add_adgroup_operation(campaign_id, adgroup_id, operator):
 def add_adgroup_cpc_bid_adjustment_operation(campaign_id,
                                              adgroup_id,
                                              value):
-    bid_operation = add_adgroup_operation(campaign_id,
-                                          adgroup_id,
-                                          'SET')
+    bid_operation = add_adgroup(campaign_id,
+                                adgroup_id,
+                                'SET')
     bidding_strategy = build_new_bidding_strategy_configuration()
     bid_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
     bid_type = build_new_bid_type('CpcBid', value)
