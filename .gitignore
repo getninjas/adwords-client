@@ -64,3 +64,4 @@ local/
 
 !.gitignore
 !.travis.yml
+tests/googleads_test.yaml
