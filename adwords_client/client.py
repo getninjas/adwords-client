@@ -289,14 +289,14 @@ class AdWords:
                                *args, **kwargs)
         sqlutils.create_index(self.conn,
                               target_name,
-                         'CampaignId')
+                              'CampaignId')
         sqlutils.create_index(self.conn,
                               target_name,
-                         'CampaignName')
+                              'CampaignName')
         sqlutils.create_index(self.conn,
                               target_name,
-                         'CustomerDescriptiveName',
-                         'CampaignName')
+                              'CustomerDescriptiveName',
+                              'CampaignName')
 
     def get_labels_report(self, customer_id, target_name, *args, **kwargs):
         """
@@ -388,14 +388,14 @@ class AdWords:
                                *args, **kwargs)
         sqlutils.create_index(self.conn,
                               target_name,
-                         'AdGroupId')
+                              'AdGroupId')
         sqlutils.create_index(self.conn,
                               target_name,
-                         'AdGroupName')
+                              'AdGroupName')
         sqlutils.create_index(self.conn,
                               target_name,
-                         'CustomerDescriptiveName',
-                         'AdGroupName')
+                              'CustomerDescriptiveName',
+                              'AdGroupName')
 
     def get_campaigns_location_report(self, customer_id, target_name, *args, **kwargs):
         create_table = kwargs.pop('create_table', False)
@@ -545,9 +545,12 @@ class AdWords:
                         utils.cents_as_money(internal_operation.new_bid)
                     )
                 else:
-                    yield operations.add_adgroup_operation(int(internal_operation.campaign_id),
-                                                           int(internal_operation.adgroup_id),
-                                                           utils.cents_as_money(internal_operation.new_bid))
+                    yield operations.add_adgroup_cpc_bid_adjustment_operation(
+                        int(internal_operation.campaign_id),
+                        int(internal_operation.adgroup_id),
+                        utils.cents_as_money(
+                            internal_operation.new_bid)
+                    )
             else:
                 yield None
 
@@ -585,12 +588,11 @@ class AdWords:
 
         def build_budget_operation(internal_operation):
             yield from operations.add_adgroup_label_operation(
-                    adgroup_id='%.0f' % internal_operation.adgroup_id,
-                    label_id='%.0f' % internal_operation.label_id
-                )
+                adgroup_id='%.0f' % internal_operation.adgroup_id,
+                label_id='%.0f' % internal_operation.label_id
+            )
 
         self._execute_operations(bjs, accounts, batchlog_table, build_budget_operation)
-
 
     def add_adgroups_labels(self, operations_table_name, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
@@ -611,9 +613,9 @@ class AdWords:
 
         def build_adgroup_name_operation(internal_operation):
             yield from operations.set_adgroup_name_operation(
-                    adgroup_id='%.0f' % internal_operation.adgroup_id,
-                    name=internal_operation.name
-                )
+                adgroup_id='%.0f' % internal_operation.adgroup_id,
+                name=internal_operation.name
+            )
 
         self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_name_operation)
 
