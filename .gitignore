@@ -64,4 +64,5 @@ local/
 
 !.gitignore
 !.travis.yml
-tests/googleads_test.yaml
+googleads.yaml
+tests/tests.py
