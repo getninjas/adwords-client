@@ -5,12 +5,14 @@ import io
 import logging
 import time
 from io import StringIO
+import yaml
 
 import googleads.adwords
 import pandas as pd
 from sqlalchemy.sql import text
 
 from . import utils
+from . import config
 from . import adwordsapi
 from . import sqlite as sqlutils
 from .adwordsapi import common
@@ -21,8 +23,25 @@ logger = logging.getLogger(__name__)
 
 
 class AdWords:
-    def __init__(self, config_file):
-        self.client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
+    @classmethod
+    def autoload(cls, path=None):
+        config.configure(path)
+        return AdWords.from_args(**config.FIELDS)
+
+    @classmethod
+    def from_args(cls, **kwargs):
+        config = {'adwords': kwargs}
+        config_yaml = yaml.safe_dump(config)
+        client = googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
+        return cls(client)
+
+    @classmethod
+    def from_file(cls, config_file):
+        client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
+        return cls(client)
+
+    def __init__(self, google_ads_client):
+        self.client = google_ads_client
         self.services = {}
         self.engine = sqlutils.get_connection()
 
