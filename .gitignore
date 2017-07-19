@@ -65,4 +65,4 @@ local/
 !.gitignore
 !.travis.yml
 googleads.yaml
-tests/tests.py
+scratch.py
