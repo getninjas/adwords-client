@@ -15,16 +15,17 @@ Getting Campaigns Report For an Account
     >>> report_df = client.load_table('campaigns_test_table')
     >>> type(report_df)
     <class 'pandas.core.frame.DataFrame'>
-    >>> print(report_df.sort(['CampaignId']).to_string())
-      AccountDescriptiveName BiddingStrategyType   CampaignId   CampaignName CampaignStatus  Clicks  Conversions  Cost  ExternalCustomerId  Impressions  SearchImpressionShare
-    0      AdwordsClientTest     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0        3.709730e+09          0.0                    0.0
+    >>> print(report_df.sort_values('CampaignId').to_string(index=False))
+    AccountDescriptiveName BiddingStrategyType   CampaignId   CampaignName CampaignStatus  Clicks  Conversions  Cost  ExternalCustomerId  Impressions  SearchImpressionShare
+        AdwordsClientTest     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0        3.709730e+09          0.0                    0.0
+
 Getting Keywords Report For an Account
 ---------------------------------------
 
     >>> client.get_keywords_report(3709730243, 'keywords_test_table', fields=True)
     >>> report_df = client.load_table('keywords_test_table')
-    >>> print(report_df.sort(['Id', 'AdGroupId']).to_string())
-      AccountDescriptiveName     AdGroupId   AdGroupName AdGroupStatus BiddingStrategySource BiddingStrategyType   CampaignId   CampaignName CampaignStatus  Clicks  Conversions  Cost     CpcBid CreativeQualityScore Criteria  ExternalCustomerId            Id  Impressions KeywordMatchType PostClickQualityScore  QualityScore  SearchImpressionShare SearchPredictedCtr   Status
-    2      AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test3        3.709730e+09  2.960324e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
-    0      AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test1        3.709730e+09  2.962592e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
-    1      AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test2        3.709730e+09  2.962592e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
+    >>> print(report_df.sort_values(['Id', 'AdGroupId']).to_string(index=False))
+    AccountDescriptiveName     AdGroupId   AdGroupName AdGroupStatus BiddingStrategySource BiddingStrategyType   CampaignId   CampaignName CampaignStatus  Clicks  Conversions  Cost     CpcBid CreativeQualityScore Criteria  ExternalCustomerId            Id  Impressions KeywordMatchType PostClickQualityScore  QualityScore  SearchImpressionShare SearchPredictedCtr   Status
+        AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test3        3.709730e+09  2.960324e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
+        AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test1        3.709730e+09  2.962592e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
+        AdwordsClientTest  5.006882e+10  TestAdgroup1       enabled              campaign     Maximize clicks  886235670.0  TestCampaign1        enabled     0.0          0.0   0.0  6690000.0                   --    test2        3.709730e+09  2.962592e+11          0.0            Broad                    --           0.0                    0.0                 --  enabled
