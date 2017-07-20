@@ -4,7 +4,7 @@ from suds import TypeNotFound
 
 logger = logging.getLogger(__name__)
 
-API_VERSION = 'v201702'
+API_VERSION = 'v201705'
 REPORTS_DEFINITIONS = {
     'BASE_PATH': 'https://developers.google.com/adwords/api/docs/appendix/reports/',
     'CAMPAIGN_NEGATIVE_KEYWORDS_PERFORMANCE_REPORT': 'campaign-negative-keywords-performance-report.csv',
@@ -22,6 +22,7 @@ REPORTS_DEFINITIONS = {
 
 
 def get_report_csv(report_type):
+    # TODO: download the csv version associated with the version of the api
     csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
                             REPORTS_DEFINITIONS[report_type])
     result = requests.get(csv_url)

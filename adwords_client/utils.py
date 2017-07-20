@@ -1,7 +1,6 @@
 import re
 import math
 
-
 double_regex = re.compile(r'[^\d.]+')
 
 
@@ -25,7 +24,11 @@ def process_integer(x):
 
 
 def float_as_cents(x):
-    return max(0.01, float(math.ceil(100.0*x))/100.0)
+    return max(0.01, float(math.ceil(100.0 * x)) / 100.0)
+
+
+def raw_money_as_cents(x):
+    return process_double(x) / 1000000
 
 
 def money_as_cents(x):
@@ -34,3 +37,31 @@ def money_as_cents(x):
 
 def cents_as_money(x):
     return int(round(float_as_cents(x) * 1000000, 0))
+
+
+def noop(x):
+    return x
+
+
+class AdwordsMapper:
+    def __init__(self, converter=noop, adapter=noop):
+        self.converter = converter
+        self.adapter = adapter
+
+    def to_adwords(self, value):
+        return self.adapter(value)
+
+    def from_adwords(self, value):
+        return self.converter(value)
+
+    @property
+    def from_adwords_func(self):
+        return self.converter
+
+MAPPERS = {
+    'Money': AdwordsMapper(raw_money_as_cents, cents_as_money),
+    'Bid': AdwordsMapper(raw_money_as_cents, cents_as_money),
+    'Long': AdwordsMapper(process_integer, int),
+    'Double': AdwordsMapper(process_double, float),
+    'Integer': AdwordsMapper(process_integer, int),
+}
