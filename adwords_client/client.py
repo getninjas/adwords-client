@@ -5,12 +5,14 @@ import io
 import logging
 import time
 from io import StringIO
+import yaml
 
 import googleads.adwords
 import pandas as pd
 from sqlalchemy.sql import text
 
 from . import utils
+from . import config
 from . import adwordsapi
 from . import sqlite as sqlutils
 from .adwordsapi import common
@@ -21,8 +23,25 @@ logger = logging.getLogger(__name__)
 
 
 class AdWords:
-    def __init__(self, config_file):
-        self.client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
+    @classmethod
+    def autoload(cls, path=None):
+        config.configure(path)
+        return AdWords.from_args(**config.FIELDS)
+
+    @classmethod
+    def from_args(cls, **kwargs):
+        config = {'adwords': kwargs}
+        config_yaml = yaml.safe_dump(config)
+        client = googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
+        return cls(client)
+
+    @classmethod
+    def from_file(cls, config_file):
+        client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
+        return cls(client)
+
+    def __init__(self, google_ads_client):
+        self.client = google_ads_client
         self.services = {}
         self.engine = sqlutils.get_connection()
 
@@ -49,32 +68,19 @@ class AdWords:
         fields = [field for field in report_csv if field not in to_remove]
         fields += include_fields
         fields.sort()
-        casts = {'Money': 'REAL',
-                 'Long': 'BIGINT',
-                 'Double': 'REAL',
-                 'Integer': 'BIGINT',
-                 'Bid': 'REAL'}
 
         rd = self.service('ReportDownloader')
         args = [report_type, fields, customer_id] + list(args)
-
-        def process_entry(field):
-            try:
-                if report_csv[field]['Type'] in casts:
-                    if casts[report_csv[field]['Type']] == 'INTEGER':
-                        return utils.process_integer
-                    else:
-                        return utils.process_double
-            except:
-                pass
-            return None
 
         if not simple_download:
             report_id = kwargs.pop('report_id', None)
             reference_date = kwargs.pop('reference_date', None)
             kwargs['return_stream'] = True
             report_stream = rd.report(*args, **kwargs)
-            converter = dict((field, process_entry(field)) for field in fields if process_entry(field))
+            converter = {
+                field: utils.MAPPERS.get(report_csv[field]['Type']).from_adwords_func
+                for field in fields if report_csv[field]['Type'] in utils.MAPPERS
+            }
             data = pd.read_csv(io.BytesIO(report_stream),
                                compression='gzip',
                                header=None,
@@ -490,7 +496,7 @@ class AdWords:
             accounts = sqlutils.dict_query(self.engine, query, 1, 1)
         return accounts
 
-    def exponential_backoff(self, batchlog_table):
+    def exponential_backoff(self, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         sleep_time = 15
         logger.info('Getting operations data...')
@@ -504,10 +510,17 @@ class AdWords:
             accounts = self.update_log_tables(bjs, batchlog_table)
 
     def load_table(self, table_name):
-        logger.info('Getting operations data...')
+        logger.info('Table data data...')
         query = 'select * from {}'.format(table_name)
         data = pd.read_sql_query(query, self.engine)
         return data
+
+    def dump_table(self, df, table_name, table_mappings=None, index=False, if_exists='replace', **kwargs):
+        logger.info('Dumping dataframe data to table...')
+        renamed_df = df
+        if table_mappings:
+            renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
+        renamed_df.to_sql(table_name, self.engine, if_exists=if_exists, index=index, **kwargs)
 
     def _setup_operations(self, table_name, batchlog_table):
         self.create_batch_operation_log(batchlog_table)
@@ -536,20 +549,21 @@ class AdWords:
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
         def build_bid_change_operation(internal_operation):
-            if utils.cents_as_money(internal_operation.new_bid) != utils.cents_as_money(internal_operation.old_bid):
+            old_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation.old_bid)
+            new_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation.new_bid)
+            if new_bid != old_bid:
                 # TODO: check if this operation is associated with an adgroup and not a keyword, should not exist
                 if internal_operation.keyword_id > -1:
                     yield operations.add_keyword_cpc_bid_adjustment_operation(
-                        int(internal_operation.adgroup_id),
-                        int(internal_operation.keyword_id),
-                        utils.cents_as_money(internal_operation.new_bid)
+                        utils.MAPPERS['Long'].to_adwords(internal_operation.adgroup_id),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation.keyword_id),
+                        new_bid,
                     )
                 else:
                     yield operations.add_adgroup_cpc_bid_adjustment_operation(
-                        int(internal_operation.campaign_id),
-                        int(internal_operation.adgroup_id),
-                        utils.cents_as_money(
-                            internal_operation.new_bid)
+                        utils.MAPPERS['Long'].to_adwords(internal_operation.campaign_id),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation.adgroup_id),
+                        new_bid,
                     )
             else:
                 yield None

@@ -18,12 +18,12 @@ def timestamp_client_table(client, table_name, timestamp):
 def adwords_worker(timestamp,
                    operation_function,
                    mapper,
-                   config_file,
                    internal_table,
                    proc_id,
                    total_procs,
                    *args, **kwargs):
-    adwords = AdWords(config_file)
+    config_file_path = kwargs.pop('config_file', None)
+    adwords = AdWords.autoload(config_file_path)
     try:
         mapper.set_lock(LOCK)
         if kwargs.pop('map_data', True):
@@ -57,8 +57,9 @@ def init_lock(parent_lock):
     global LOCK
     LOCK = parent_lock
 
+
 class ClientOperation:
-    def __init__(self, mapper, config_file):
+    def __init__(self, mapper, config_file=None):
         self.mapper = mapper
         self.config_file = config_file
 
@@ -68,12 +69,13 @@ class ClientOperation:
         batchlog_table = kwargs.get('batchlog_table', False)
         n_procs = kwargs.pop('n_procs', cpu_count() + 1) if batchlog_table else 1
         timestamp = datetime.now().isoformat()
+        if self.config_file:
+            kwargs['config_file'] = self.config_file
         for i in range(0, n_procs):
             worker_args = [
                               timestamp,
                               operation_function,
                               self.mapper,
-                              self.config_file,
                               internal_table,
                               i,
                               n_procs
