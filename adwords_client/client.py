@@ -6,10 +6,11 @@ import logging
 import time
 from io import StringIO
 import yaml
-
+from typing import get_type_hints
 import googleads.adwords
 import pandas as pd
 from sqlalchemy.sql import text
+from sqlalchemy.exc import OperationalError
 
 from . import utils
 from . import config
@@ -509,6 +510,19 @@ class AdWords:
             sleep_time *= 2
             accounts = self.update_log_tables(bjs, batchlog_table)
 
+    def get_min_value(self, table_name, *args):
+        min_value = 0
+        with self.engine.begin() as conn:
+            for column in args:
+                try:
+                    query = 'select min({column}) from {table_name};'.format(column=column, table_name=table_name)
+                    for row in conn.execute(query):
+                        if min_value > row[0]:
+                            min_value = row[0]
+                except OperationalError:
+                    pass
+        return min_value
+
     def load_table(self, table_name):
         logger.info('Table data data...')
         query = 'select * from {}'.format(table_name)
@@ -569,6 +583,56 @@ class AdWords:
                 yield None
 
         self._execute_operations(bjs, accounts, batchlog_table, build_bid_change_operation)
+
+    def create_objects(self, table_name, batchlog_table='batchlog_table'):
+        """
+        Possible columns in the table:
+
+        :param table_name:
+        :param batchlog_table:
+        :return:
+        """
+        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        bjs, accounts = self._setup_operations(table_name, batchlog_table)
+
+        local_objects_ids = int(self.get_min_value(table_name, 'id', 'adgroup_id', 'campaign_id'))
+
+        def get_next_id():
+            nonlocal local_objects_ids
+            local_objects_ids -= 1
+            return local_objects_ids
+
+        mappers = {
+            'client_id': utils.Long,
+            'campaign_id': utils.Long,
+        }
+        mappers.update(operations.add_new_keyword_operation.__annotations__)
+        mappers.update(operations.add_adgroup.__annotations__)
+        mappers.update(operations.add_ad.__annotations__)
+        mappers.update(operations.add_budget.__annotations__)
+        mappers.update(operations.add_campaign.__annotations__)
+
+        def build_new_keyword_operation(internal_operation):
+            operation_kwargs = internal_operation._asdict()
+            object_type = operation_kwargs.pop('object_type')
+            if object_type == 'keyword':
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                yield operations.add_new_keyword_operation(**operation_kwargs)
+            elif internal_operation.object_type == 'adgroup':
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                yield operations.add_adgroup(**operation_kwargs)
+            elif internal_operation.object_type == 'ad':
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                yield operations.add_ad(**operation_kwargs)
+            elif internal_operation.object_type == 'campaign':
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                operation_kwargs['budget_id'] = utils.MAPPERS[utils.Long].to_adwords(get_next_id())
+                yield operations.add_budget(**operation_kwargs)
+                yield operations.add_campaign(**operation_kwargs)
+            else:
+                yield None
+
+        self._execute_operations(bjs, accounts, batchlog_table, build_new_keyword_operation)
 
     def modify_keywords_text(self, table_name, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))

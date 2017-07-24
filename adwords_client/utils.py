@@ -1,5 +1,7 @@
 import re
 import math
+import typing
+from pandas import isnull
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -49,19 +51,27 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        return self.adapter(value)
+        return self.adapter(value) if not isnull(value) else None
 
     def from_adwords(self, value):
-        return self.converter(value)
+        return self.converter(value) if not isnull(value) else None
 
     @property
     def from_adwords_func(self):
         return self.converter
 
+Money = typing.NewType('Money', float)
+Bid = typing.NewType('Bid', float)
+Long = typing.NewType('Long', int)
+Double = typing.NewType('Double', float)
+Integer = typing.NewType('Integer', int)
+String = typing.NewType('String', str)
+
 MAPPERS = {
-    'Money': AdwordsMapper(raw_money_as_cents, cents_as_money),
-    'Bid': AdwordsMapper(raw_money_as_cents, cents_as_money),
-    'Long': AdwordsMapper(process_integer, int),
-    'Double': AdwordsMapper(process_double, float),
-    'Integer': AdwordsMapper(process_integer, int),
+    Money: AdwordsMapper(raw_money_as_cents, cents_as_money),
+    Bid: AdwordsMapper(raw_money_as_cents, cents_as_money),
+    Long: AdwordsMapper(process_integer, int),
+    Double: AdwordsMapper(process_double, float),
+    Integer: AdwordsMapper(process_integer, int),
+    String: AdwordsMapper(process_integer, str),
 }

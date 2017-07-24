@@ -1,20 +1,9 @@
 import logging
-import math
 import uuid
 
+from .. import utils
+
 logger = logging.getLogger(__name__)
-
-
-def float_as_cents(x):
-    return max(0.01, float(math.ceil(100.0 * x)) / 100.0)
-
-
-def money_as_cents(x):
-    return float(x) / 1000000
-
-
-def cents_as_money(x):
-    return int(round(float_as_cents(x) * 1000000, 0))
 
 
 def add_label_operation(label):
@@ -64,10 +53,19 @@ def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
     yield set_campaign_budget(budget_id, campaign_id)
 
 
-def add_ad(adgroup_id, ad_dict):
+def add_ad(adgroup_id: utils.Long,
+           headline1: utils.String,
+           headline2: utils.String,
+           description: utils.String,
+           urls: utils.String,
+           ad_id: utils.Long = None,
+           adtype: utils.String = 'ExpandedTextAd',
+           **kwargs):
+    ad_dict = build_ad(headline1, headline2, description, urls, ad_id, adtype)
     operation = {
         'xsi_type': 'AdGroupAdOperation',
         'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201705/AdGroupAdService.AdGroupAd
             'xsi_type': 'AdGroupAd',
             'adGroupId': adgroup_id,
             'ad': ad_dict,
@@ -128,11 +126,45 @@ def build_keyword(text, keyword_id=None, match='BROAD'):
     return result
 
 
-def add_campaign(campaign_id, campaign_name):
+def add_campaign(campaign_id: utils.Long,
+                 campaign_name: utils.String,
+                 budget_id: utils.Long,
+                 status: utils.String = 'PAUSED',
+                 advertising_channel: utils.String = 'SEARCH',
+                 **kwargs):
+    bidding_strategy = build_new_bidding_strategy_configuration(with_bids=False, strategy_type='MANUAL_CPC')
     operation = {
         'xsi_type': 'CampaignOperation',
         'operator': 'ADD',
         'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201705/CampaignService.Campaign
+            'xsi_type': 'Campaign',
+            'id': campaign_id,
+            'name': campaign_name,
+
+            ## From: https://developers.google.com/adwords/api/docs/samples/python/campaign-management#add-complete-campaigns-using-batch-jobs
+            # 'advertisingChannelType': 'SEARCH',
+            # Recommendation: Set the campaign to PAUSED when creating it to
+            # stop the ads from immediately serving. Set to ENABLED once
+            # you've added targeting and the ads are ready to serve.
+            'status': status,
+            # Note that only the budgetId is required
+            'budget': {
+                'budgetId': budget_id
+            },
+            'biddingStrategyConfiguration': bidding_strategy,
+            'advertisingChannelType': advertising_channel,
+        },
+    }
+    return operation
+
+
+def add_account(campaign_id, campaign_name):
+    operation = {
+        'xsi_type': 'CampaignOperation',
+        'operator': 'ADD',
+        'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201705/CampaignService.Campaign
             'xsi_type': 'Campaign',
             'id': campaign_id,
             'name': campaign_name,
@@ -170,7 +202,11 @@ def set_campaign_budget(budget_id, campaign_id):
     }
 
 
-def add_budget(amount, budget_id, delivery='ACCELERATED', shared=False):
+def add_budget(budget: utils.Money,
+               budget_id: utils.Long,
+               delivery: utils.String = 'ACCELERATED',
+               budget_name: utils.String = None,
+                **kwargs):
     operation = {
         'xsi_type': 'BudgetOperation',
         'operator': 'ADD',
@@ -178,17 +214,17 @@ def add_budget(amount, budget_id, delivery='ACCELERATED', shared=False):
         'operand': {
             'xsi_type': 'Budget',
             'budgetId': int(budget_id),
-            'amount': build_money(float(amount)),
+            'amount': build_money(budget),
         },
     }
 
     if delivery:
         operation['operand']['deliveryMethod'] = delivery
 
-    if shared:
+    if budget_name:
         operation['operand'].update({
             'isExplicitlyShared': True,
-            'name': 'automatic-%s' % uuid.uuid1()
+            'name': budget_name
         })
     else:
         operation['operand']['isExplicitlyShared'] = False
@@ -199,7 +235,7 @@ def add_budget(amount, budget_id, delivery='ACCELERATED', shared=False):
 def build_money(money):
     return {
         'xsi_type': 'Money',
-        'microAmount': cents_as_money(money),
+        'microAmount': money,
     }
 
 
@@ -242,8 +278,13 @@ def build_new_bid_type(xsi_type, value):
     return bid_type
 
 
-def build_new_bidding_strategy_configuration():
-    return {'xsi_type': 'BiddingStrategyConfiguration', 'bids': []}
+def build_new_bidding_strategy_configuration(with_bids=True, strategy_type=None):
+    bidding_strategy = {'xsi_type': 'BiddingStrategyConfiguration'}
+    if with_bids:
+        bidding_strategy['bids'] = []
+    if strategy_type:
+        bidding_strategy['biddingStrategyType'] = strategy_type
+    return bidding_strategy
 
 
 def add_keyword_cpc_bid_adjustment_operation(adgroup_id,
@@ -262,35 +303,44 @@ def add_keyword_cpc_bid_adjustment_operation(adgroup_id,
     return bid_operation
 
 
-def add_new_keyword_operation(adgroup_id,
-                              text,
-                              match_type,
-                              status,
-                              value):
+def add_new_keyword_operation(adgroup_id: utils.Long = None,
+                              text: utils.String = None,
+                              keyword_match_type: utils.String = None,
+                              status: utils.String = 'PAUSED',
+                              cpc_bid: utils.Bid = None,
+                              **kwargs):
     new_keyword_operation = add_biddable_adgroup_criterion_operation(
         adgroup_id,
         'ADD',
         'Keyword',
         criterion_params={
             'text': text,
-            'matchType': match_type.upper(),
+            'matchType': keyword_match_type.upper(),
         },
         userStatus=status.upper()
     )
     bidding_strategy = build_new_bidding_strategy_configuration()
     new_keyword_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
-    bid_type = build_new_bid_type('CpcBid', value)
+    bid_type = build_new_bid_type('CpcBid', cpc_bid)
     new_keyword_operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
     return new_keyword_operation
 
 
-def add_adgroup(campaign_id, adgroup_id, operator='ADD'):
+def add_adgroup(campaign_id: utils.Long,
+                adgroup_id: utils.Long,
+                adgroup_name: utils.String,
+                status: utils.String ='PAUSED',
+                operator: utils.String ='ADD',
+                **kwargs):
     operation = {
         'xsi_type': 'AdGroupOperation',
         'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201705/AdGroupService.AdGroup
             'xsi_type': 'AdGroup',
             'campaignId': campaign_id,
             'id': adgroup_id,
+            'name': adgroup_name,
+            'status': status,
         },
         'operator': operator,
     }
@@ -304,7 +354,6 @@ def add_adgroup_cpc_bid_adjustment_operation(campaign_id,
                                 adgroup_id,
                                 'SET')
     bidding_strategy = build_new_bidding_strategy_configuration()
+    bidding_strategy['bids'].append(build_new_bid_type('CpcBid', value))
     bid_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
-    bid_type = build_new_bid_type('CpcBid', value)
-    bid_operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
     return bid_operation
