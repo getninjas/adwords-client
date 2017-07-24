@@ -8,23 +8,41 @@ Client creation
     >>> from adwords_client.client import AdWords
     >>> client = AdWords.autoload()
 
-.. testsetup:
+Objects Creation
+----------------
 
-    >>> client.get_keywords_report(3709730243, 'setup_keywords_test_table', fields=True)
-    >>> report_df = client.load_table('setup_keywords_test_table')
-    >>> report_df['NewCpcBid'] = 13.37
-    >>> table_mappings = {
-    ...     'new_bid': 'NewCpcBid',
-    ...     'old_bid': 'CpcBid',
-    ...     'client_id': 'ExternalCustomerId',
-    ...     'campaign_id': 'CampaignId',
-    ...     'adgroup_id': 'AdGroupId',
-    ...     'keyword_id': 'Id',
-    ... }
-    >>> client.dump_table(report_df, 'new_keywords_test_table', table_mappings=table_mappings)
-    >>> client.modify_bids('new_keywords_test_table')
+    >>> objects = [
+    ...     {
+    ...         'object_type': 'campaign',
+    ...         'client_id': 3709730243,
+    ...         'campaign_id': -1,
+    ...         'budget': 1000,
+    ...         'campaign_name': 'API test campaign'
+    ...     },
+    ...     {
+    ...         'object_type': 'adgroup',
+    ...         'client_id': 3709730243,
+    ...         'campaign_id': -1,
+    ...         'adgroup_id': -2,
+    ...         'adgroup_name': 'API test adgroup',
+    ...     },
+    ...     {
+    ...         'object_type': 'keyword',
+    ...         'client_id': 3709730243,
+    ...         'campaign_id': -1,
+    ...         'adgroup_id': -2,
+    ...         'text': 'my search term',
+    ...         'keyword_match_type': 'broad',
+    ...         'status': 'paused',
+    ...         'cpc_bid': 1.23,
+    ...     },
+    ... ]
+
+    >>> import pandas as pd
+    >>> df = pd.DataFrame.from_dict(objects)
+    >>> client.dump_table(df, 'new_objects_table')
+    >>> client.create_objects('new_objects_table')
     >>> client.exponential_backoff()
-
 
 Getting Campaigns Report For an Account
 ---------------------------------------
