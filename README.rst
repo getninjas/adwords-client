@@ -12,12 +12,14 @@ Setup
 
 This package can be installed with pip or directly from this repo. To do so, just run
 
-::
+.. code:: bash
+
    pip install adwords-client
 
 Or
 
-::
+.. code:: bash
+
    pip install -e git+https://github.com/getninjas/adwords-client.git#egg=adwords-client
 
 Usage
@@ -29,7 +31,8 @@ described here https://developers.google.com/adwords/api/docs/guides/signup.
 By default, the ``autoload()'' method of the client looks for credentials in the following
 environment variables:
 
-::
+.. code:: bash
+
    DEVELOPER_TOKEN=***developer token here***
    CLIENT_CUSTOMER_ID=***id of the addcount you wish to manage by default***
    CLIENT_ID=***client id for the google API credentials***
