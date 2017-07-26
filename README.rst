@@ -31,7 +31,7 @@ described here https://developers.google.com/adwords/api/docs/guides/signup.
 By default, the ``autoload()'' method of the client looks for credentials in the following
 environment variables:
 
-.. code:: bash
+::
 
    DEVELOPER_TOKEN=***developer token here***
    CLIENT_CUSTOMER_ID=***id of the addcount you wish to manage by default***
@@ -39,7 +39,7 @@ environment variables:
    CLIENT_SECRET=***client secret for the google API credentials***
    REFRESH_TOKEN=***refresh token that should be manually generated***
 
-If these are not present, it fallsback to the file ``googleads.yaml'' in the project folder and,
-if it does not exists, it looks for ``googleads.yaml'' inside the current users' home folder.
+If these are not present, it fallsback to the file ``googleads.yaml`` in the project folder and,
+if it does not exists, it looks for ``googleads.yaml`` inside the current users' home folder.
 This file is as defined in the exaples at https://github.com/googleads/googleads-python-lib.
 If none of these options are available, it raises an error.
