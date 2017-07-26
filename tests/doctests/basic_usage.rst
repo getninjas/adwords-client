@@ -12,6 +12,38 @@ Objects Creation
 ----------------
 
     >>> objects = [
+        ...     {
+        ...         'object_type': 'campaign',
+        ...         'client_id': 7857288943,
+        ...         'campaign_id': -1,
+        ...         'budget': 1000,
+        ...         'campaign_name': 'API test campaign'
+        ...     },
+        ...     {
+        ...         'object_type': 'adgroup',
+        ...         'client_id': 7857288943,
+        ...         'campaign_id': -1,
+        ...         'adgroup_id': -2,
+        ...         'adgroup_name': 'API test adgroup',
+        ...     },
+        ...     {
+        ...         'object_type': 'keyword',
+        ...         'client_id': 7857288943,
+        ...         'campaign_id': -1,
+        ...         'adgroup_id': -2,
+        ...         'text': 'my search term',
+        ...         'keyword_match_type': 'broad',
+        ...         'status': 'paused',
+        ...         'cpc_bid': 13.37,
+        ...     },
+        ... ]
+        >>> import pandas as pd
+        >>> df = pd.DataFrame.from_dict(objects)
+        >>> client.dump_table(df, 'new_objects_table')
+        >>> client.sync_objects('new_objects_table')
+        >>> client.exponential_backoff()
+
+
     ...     {
     ...         'object_type': 'campaign',
     ...         'client_id': 7857288943,
@@ -93,6 +125,20 @@ Removing Our Test Capaign
 -------------------------
 
     >>> objects = [
+        ...     {
+        ...         'object_type': 'campaign',
+        ...         'client_id': 7857288943,
+        ...         'campaign_id': new_report_df['CampaignId'][0],
+        ...         'campaign_name': 'API test campaign',
+        ...         'operator': 'SET',
+        ...         'status': 'REMOVED',
+        ...     }
+        ... ]
+        >>> df = pd.DataFrame.from_dict(objects)
+        >>> client.dump_table(df, 'new_objects_table')
+        >>> client.sync_objects('new_objects_table')
+        >>> client.exponential_backoff()
+
     ...     {
     ...         'object_type': 'campaign',
     ...         'client_id': 7857288943,
