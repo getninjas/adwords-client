@@ -33,11 +33,11 @@ environment variables:
 
 ::
 
-   DEVELOPER_TOKEN=***developer token here***
-   CLIENT_CUSTOMER_ID=***id of the addcount you wish to manage by default***
-   CLIENT_ID=***client id for the google API credentials***
-   CLIENT_SECRET=***client secret for the google API credentials***
-   REFRESH_TOKEN=***refresh token that should be manually generated***
+   DEVELOPER_TOKEN=developer token here
+   CLIENT_CUSTOMER_ID=id of the addcount you wish to manage by default
+   CLIENT_ID=client id for the google API credentials
+   CLIENT_SECRET=client secret for the google API credentials
+   REFRESH_TOKEN=refresh token that should be manually generated
 
 If these are not present, it fallsback to the file ``googleads.yaml`` in the project folder and,
 if it does not exists, it looks for ``googleads.yaml`` inside the current users' home folder.
