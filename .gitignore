@@ -48,6 +48,7 @@ static-collected/*
 *.db
 *~
 .*
+!.coveragerc
 
 html/
 htmlcov/
