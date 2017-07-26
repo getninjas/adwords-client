@@ -53,13 +53,13 @@ def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
     yield set_campaign_budget(budget_id, campaign_id)
 
 
-def add_ad(adgroup_id: utils.Long,
-           headline1: utils.String,
-           headline2: utils.String,
-           description: utils.String,
-           urls: utils.String,
-           ad_id: utils.Long = None,
-           adtype: utils.String = 'ExpandedTextAd',
+def add_ad(adgroup_id: 'Long',
+           headline1: 'String',
+           headline2: 'String',
+           description: 'String',
+           urls: 'String',
+           ad_id: 'Long' = None,
+           adtype: 'String' = 'ExpandedTextAd',
            **kwargs):
     ad_dict = build_ad(headline1, headline2, description, urls, ad_id, adtype)
     operation = {
@@ -126,16 +126,17 @@ def build_keyword(text, keyword_id=None, match='BROAD'):
     return result
 
 
-def add_campaign(campaign_id: utils.Long,
-                 campaign_name: utils.String,
-                 budget_id: utils.Long,
-                 status: utils.String = 'PAUSED',
-                 advertising_channel: utils.String = 'SEARCH',
+def add_campaign(campaign_id: 'Long',
+                 campaign_name: 'String',
+                 budget_id: 'Long' = None,
+                 status: 'String' = 'PAUSED',
+                 advertising_channel: 'String' = 'SEARCH',
+                 operator: 'String' = 'ADD',
                  **kwargs):
     bidding_strategy = build_new_bidding_strategy_configuration(with_bids=False, strategy_type='MANUAL_CPC')
     operation = {
         'xsi_type': 'CampaignOperation',
-        'operator': 'ADD',
+        'operator': operator.upper(),
         'operand': {
             # https://developers.google.com/adwords/api/docs/reference/v201705/CampaignService.Campaign
             'xsi_type': 'Campaign',
@@ -149,13 +150,12 @@ def add_campaign(campaign_id: utils.Long,
             # you've added targeting and the ads are ready to serve.
             'status': status,
             # Note that only the budgetId is required
-            'budget': {
-                'budgetId': budget_id
-            },
             'biddingStrategyConfiguration': bidding_strategy,
             'advertisingChannelType': advertising_channel,
         },
     }
+    if budget_id:
+        operation['operand']['budget'] = {'budgetId': budget_id}
     return operation
 
 
@@ -202,10 +202,10 @@ def set_campaign_budget(budget_id, campaign_id):
     }
 
 
-def add_budget(budget: utils.Money,
-               budget_id: utils.Long,
-               delivery: utils.String = 'ACCELERATED',
-               budget_name: utils.String = None,
+def add_budget(budget: 'Money',
+               budget_id: 'Long',
+               delivery: 'String' = 'ACCELERATED',
+               budget_name: 'String' = None,
                 **kwargs):
     operation = {
         'xsi_type': 'BudgetOperation',
@@ -303,11 +303,11 @@ def add_keyword_cpc_bid_adjustment_operation(adgroup_id,
     return bid_operation
 
 
-def add_new_keyword_operation(adgroup_id: utils.Long = None,
-                              text: utils.String = None,
-                              keyword_match_type: utils.String = None,
-                              status: utils.String = 'PAUSED',
-                              cpc_bid: utils.Bid = None,
+def add_new_keyword_operation(adgroup_id: 'Long' = None,
+                              text: 'String' = None,
+                              keyword_match_type: 'String' = None,
+                              status: 'String' = 'PAUSED',
+                              cpc_bid: 'Bid' = None,
                               **kwargs):
     new_keyword_operation = add_biddable_adgroup_criterion_operation(
         adgroup_id,
@@ -326,11 +326,11 @@ def add_new_keyword_operation(adgroup_id: utils.Long = None,
     return new_keyword_operation
 
 
-def add_adgroup(campaign_id: utils.Long,
-                adgroup_id: utils.Long,
-                adgroup_name: utils.String,
-                status: utils.String ='PAUSED',
-                operator: utils.String ='ADD',
+def add_adgroup(campaign_id: 'Long',
+                adgroup_id: 'Long',
+                adgroup_name: 'String',
+                status: 'String' ='PAUSED',
+                operator: 'String' ='ADD',
                 **kwargs):
     operation = {
         'xsi_type': 'AdGroupOperation',
