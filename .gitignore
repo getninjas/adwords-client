@@ -64,5 +64,5 @@ local/
 
 !.gitignore
 !.travis.yml
-googleads.yaml
+googleads*.yaml
 scratch.py
