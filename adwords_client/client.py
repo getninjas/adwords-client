@@ -550,7 +550,11 @@ class AdWords:
             accounts = sqlutils.dict_query(self.engine, query, 1, 1)
         return accounts
 
-    def exponential_backoff(self, batchlog_table='batchlog_table'):
+    def exponential_backoff(self, *args, **kwargs):
+        logger.warning('DEPRECATED: use wait_jobs instead...')
+        return self.wait_jobs(*args, **kwargs)
+
+    def wait_jobs(self, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         sleep_time = 15
         logger.info('Getting operations data...')
