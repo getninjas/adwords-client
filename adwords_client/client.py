@@ -637,7 +637,7 @@ class AdWords:
 
         self._execute_operations(bjs, accounts, batchlog_table, build_bid_change_operation)
 
-    def create_objects(self, table_name, batchlog_table='batchlog_table'):
+    def sync_objects(self, table_name, batchlog_table='batchlog_table'):
         """
         Possible columns in the table:
 
