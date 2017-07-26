@@ -28,7 +28,7 @@ Usage
 In order to test and run this package, you need some credentials from Google AdWords as
 described here https://developers.google.com/adwords/api/docs/guides/signup.
 
-By default, the ``autoload()'' method of the client looks for credentials in the following
+By default, the ``autoload()`` method of the client looks for credentials in the following
 environment variables:
 
 ::
@@ -43,3 +43,7 @@ If these are not present, it fallsback to the file ``googleads.yaml`` in the pro
 if it does not exists, it looks for ``googleads.yaml`` inside the current users' home folder.
 This file is as defined in the exaples at https://github.com/googleads/googleads-python-lib.
 If none of these options are available, it raises an error.
+
+For further information on usage, look into the
+`tests/doctests <https://github.com/getninjas/adwords-client/tree/objects-creation/tests/doctests>`_
+folder of this repo.
