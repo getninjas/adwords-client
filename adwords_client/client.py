@@ -6,7 +6,6 @@ import logging
 import time
 from io import StringIO
 import yaml
-from typing import get_type_hints
 import googleads.adwords
 import pandas as pd
 from sqlalchemy.sql import text
@@ -161,28 +160,34 @@ class AdWords:
                           'ConversionTrackerId',
                           'IsNegative']
         exclude_terms = ['Significance', 'ActiveView', 'Average']
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',
-                                'ExternalCustomerId',
-                                'CampaignId',
-                                'CampaignName',
-                                'CampaignStatus',
-                                'AdGroupId',
-                                'AdGroupName',
-                                'AdGroupStatus',
-                                'Id',
-                                'Impressions',
-                                'Clicks',
-                                'Conversions',
-                                'Cost',
-                                'Status',
-                                'Headline',
-                                'HeadlinePart1',
-                                'HeadlinePart2',
-                                'Description',
-                                'Description1',
-                                'Description2',
-                                'DisplayUrl']
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'AdGroupId',
+                    'AdGroupName',
+                    'AdGroupStatus',
+                    'Id',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                    'Status',
+                    'Headline',
+                    'HeadlinePart1',
+                    'HeadlinePart2',
+                    'Description',
+                    'Description1',
+                    'Description2',
+                    'DisplayUrl',
+                ]
         return self.get_report('AD_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -197,32 +202,37 @@ class AdWords:
         create_table = kwargs.pop('create_table', False)
         exclude_fields = ['ConversionTypeName']
         exclude_terms = ['Significance']
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',
-                                'ExternalCustomerId',
-                                'CampaignId',
-                                'CampaignName',
-                                'CampaignStatus',
-                                'AdGroupId',
-                                'AdGroupName',
-                                'AdGroupStatus',
-                                'Id',
-                                'Impressions',
-                                'Clicks',
-                                'Conversions',
-                                'Cost',
-                                'Status',
-                                'KeywordMatchType',
-                                'Criteria',
-                                'BiddingStrategySource',
-                                'BiddingStrategyType',
-                                'SearchImpressionShare',
-                                'CpcBid',
-                                'CreativeQualityScore',
-                                'PostClickQualityScore',
-                                'SearchPredictedCtr',
-                                'QualityScore',
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'AdGroupId',
+                    'AdGroupName',
+                    'AdGroupStatus',
+                    'Id',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                    'Status',
+                    'KeywordMatchType',
+                    'Criteria',
+                    'BiddingStrategySource',
+                    'BiddingStrategyType',
+                    'SearchImpressionShare',
+                    'CpcBid',
+                    'CreativeQualityScore',
+                    'PostClickQualityScore',
+                    'SearchPredictedCtr',
+                    'QualityScore',
+                ]
         return self.get_report('KEYWORDS_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -237,24 +247,29 @@ class AdWords:
         create_table = kwargs.pop('create_table', False)
         exclude_fields = ['ConversionTypeName']
         exclude_terms = ['Significance']
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',
-                                'ExternalCustomerId',
-                                'CampaignId',
-                                'CampaignName',
-                                'CampaignStatus',
-                                'AdGroupId',
-                                'AdGroupName',
-                                'AdGroupStatus',
-                                'Impressions',
-                                'Clicks',
-                                'Conversions',
-                                'Cost',
-                                'Status',
-                                'KeywordId',
-                                'KeywordTextMatchingQuery',
-                                'Query',
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'AdGroupId',
+                    'AdGroupName',
+                    'AdGroupStatus',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                    'Status',
+                    'KeywordId',
+                    'KeywordTextMatchingQuery',
+                    'Query',
+                ]
         return self.get_report('SEARCH_QUERY_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -271,20 +286,25 @@ class AdWords:
         exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
         exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
         create_table = kwargs.pop('create_table', False)
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',
-                                'ExternalCustomerId',
-                                'CampaignId',
-                                'CampaignName',
-                                'CampaignStatus',
-                                'Impressions',
-                                'Clicks',
-                                'Conversions',
-                                'Cost',
-                                'Status',
-                                'BiddingStrategyType',
-                                'SearchImpressionShare',
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                    'Status',
+                    'BiddingStrategyType',
+                    'SearchImpressionShare',
+                ]
         return self.get_report('CAMPAIGN_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -314,12 +334,17 @@ class AdWords:
         exclude_terms = kwargs.pop('exclude_terms', [])
         exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
         create_table = kwargs.pop('create_table', False)
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',  # The descriptive name of the Customer account.
-                                'ExternalCustomerId',  # The Customer ID.
-                                'LabelId',
-                                'LabelName',
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',  # The descriptive name of the Customer account.
+                    'ExternalCustomerId',  # The Customer ID.
+                    'LabelId',
+                    'LabelName',
+                ]
         return self.get_report('LABEL_REPORT',
                                customer_id,
                                target_name,
@@ -339,15 +364,21 @@ class AdWords:
         exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
         exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
         create_table = kwargs.pop('create_table', False)
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',  # The descriptive name of the Customer account.
-                                'ExternalCustomerId',  # The Customer ID.
-                                'BudgetId',
-                                'BudgetName',
-                                'BudgetReferenceCount',  # The number of campaigns actively using the budget.
-                                'Amount',  # The daily budget
-                                'IsBudgetExplicitlyShared',  # Shared budget (true) or specific to the campaign (false)
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',  # The descriptive name of the Customer account.
+                    'ExternalCustomerId',  # The Customer ID.
+                    'BudgetId',
+                    'BudgetName',
+                    'BudgetReferenceCount',  # The number of campaigns actively using the budget.
+                    'Amount',  # The daily budget
+                    'IsBudgetExplicitlyShared',
+                    # Shared budget (true) or specific to the campaign (false)
+                ]
         return self.get_report('BUDGET_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -364,26 +395,31 @@ class AdWords:
         exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
         exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
         create_table = kwargs.pop('create_table', False)
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = ['AccountDescriptiveName',
-                                'ExternalCustomerId',
-                                'CampaignId',
-                                'CampaignName',
-                                'CampaignStatus',
-                                'AdGroupId',
-                                'AdGroupName',
-                                'AdGroupStatus',
-                                'Impressions',
-                                'Clicks',
-                                'Conversions',
-                                'Cost',
-                                'Status',
-                                'BiddingStrategySource',
-                                'BiddingStrategyType',
-                                'SearchImpressionShare',
-                                'CpcBid',
-                                'Labels',
-                                ]
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'AdGroupId',
+                    'AdGroupName',
+                    'AdGroupStatus',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                    'Status',
+                    'BiddingStrategySource',
+                    'BiddingStrategyType',
+                    'SearchImpressionShare',
+                    'CpcBid',
+                    'Labels',
+                ]
         return self.get_report('ADGROUP_PERFORMANCE_REPORT',
                                customer_id,
                                target_name,
@@ -408,8 +444,25 @@ class AdWords:
         create_table = kwargs.pop('create_table', False)
         exclude_fields = []
         exclude_terms = ['Significance']
-        if kwargs.pop('fields', False):
-            kwargs['fields'] = [''] + kwargs['fields']
+        use_fields = kwargs.pop('fields', False)
+        if use_fields:
+            try:
+                kwargs['fields'] = list(use_fields)
+            except TypeError:
+                kwargs['fields'] = [
+                    'AccountDescriptiveName',
+                    'ExternalCustomerId',
+                    'CampaignId',
+                    'CampaignName',
+                    'CampaignStatus',
+                    'Id',
+                    'IsNegative',
+                    'BidModifier',
+                    'Impressions',
+                    'Clicks',
+                    'Conversions',
+                    'Cost',
+                ]
         return self.get_report('CAMPAIGN_LOCATION_TARGET_REPORT',
                                customer_id,
                                target_name,
@@ -603,8 +656,8 @@ class AdWords:
             return local_objects_ids
 
         mappers = {
-            'client_id': utils.Long,
-            'campaign_id': utils.Long,
+            'client_id': 'Long',
+            'campaign_id': 'Long',
         }
         mappers.update(operations.add_new_keyword_operation.__annotations__)
         mappers.update(operations.add_adgroup.__annotations__)
@@ -616,18 +669,27 @@ class AdWords:
             operation_kwargs = internal_operation._asdict()
             object_type = operation_kwargs.pop('object_type')
             if object_type == 'keyword':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
+                                    operation_kwargs.items()}
+                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_new_keyword_operation(**operation_kwargs)
             elif internal_operation.object_type == 'adgroup':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
+                                    operation_kwargs.items()}
+                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_adgroup(**operation_kwargs)
             elif internal_operation.object_type == 'ad':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
+                                    operation_kwargs.items()}
+                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_ad(**operation_kwargs)
             elif internal_operation.object_type == 'campaign':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, utils.String)].to_adwords(v) for k, v in operation_kwargs.items()}
-                operation_kwargs['budget_id'] = utils.MAPPERS[utils.Long].to_adwords(get_next_id())
-                yield operations.add_budget(**operation_kwargs)
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
+                                    operation_kwargs.items()}
+                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
+                if operation_kwargs.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation_kwargs:
+                    operation_kwargs['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
+                    yield operations.add_budget(**operation_kwargs)
                 yield operations.add_campaign(**operation_kwargs)
             else:
                 yield None
