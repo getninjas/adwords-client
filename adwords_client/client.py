@@ -673,23 +673,23 @@ class AdWords:
             operation_kwargs = internal_operation._asdict()
             object_type = operation_kwargs.pop('object_type')
             if object_type == 'keyword':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
-                                    operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                    for k, v in operation_kwargs.items()}
                 operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_new_keyword_operation(**operation_kwargs)
             elif internal_operation.object_type == 'adgroup':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
-                                    operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                    for k, v in operation_kwargs.items()}
                 operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_adgroup(**operation_kwargs)
             elif internal_operation.object_type == 'ad':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
-                                    operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                    for k, v in operation_kwargs.items()}
                 operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 yield operations.add_ad(**operation_kwargs)
             elif internal_operation.object_type == 'campaign':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v) for k, v in
-                                    operation_kwargs.items()}
+                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                    for k, v in operation_kwargs.items()}
                 operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
                 if operation_kwargs.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation_kwargs:
                     operation_kwargs['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
