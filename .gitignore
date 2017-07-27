@@ -48,6 +48,7 @@ static-collected/*
 *.db
 *~
 .*
+!.coveragerc
 
 html/
 htmlcov/
@@ -64,5 +65,5 @@ local/
 
 !.gitignore
 !.travis.yml
-googleads.yaml
+googleads*.yaml
 scratch.py

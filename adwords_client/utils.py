@@ -1,5 +1,7 @@
 import re
 import math
+import typing
+from pandas import isnull
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -49,10 +51,10 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        return self.adapter(value)
+        return self.adapter(value) if not isnull(value) else None
 
     def from_adwords(self, value):
-        return self.converter(value)
+        return self.converter(value) if not isnull(value) else None
 
     @property
     def from_adwords_func(self):
@@ -64,4 +66,5 @@ MAPPERS = {
     'Long': AdwordsMapper(process_integer, int),
     'Double': AdwordsMapper(process_double, float),
     'Integer': AdwordsMapper(process_integer, int),
+    'String': AdwordsMapper(str, str),
 }
