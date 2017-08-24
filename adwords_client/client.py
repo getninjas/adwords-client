@@ -647,7 +647,7 @@ class AdWords:
             new_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation['new_bid'])
             if new_bid != old_bid:
                 # TODO: check if this operation is associated with an adgroup and not a keyword, should not exist
-                if internal_operation['keyword_id '] > -1:
+                if internal_operation['keyword_id'] > -1:
                     yield operations.add_keyword_cpc_bid_adjustment_operation(
                         utils.MAPPERS['Long'].to_adwords(internal_operation['adgroup_id']),
                         utils.MAPPERS['Long'].to_adwords(internal_operation['keyword_id']),
