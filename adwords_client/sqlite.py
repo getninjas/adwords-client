@@ -20,11 +20,11 @@ def itertable(engine, table_name):
         yield instance
 
 
-def bulk_insert(engine, table_name, data):
-    table = get_model_from_table(table_name, engine)
+def bulk_insert(engine, table_name, data, model=None):
+    model = get_model_from_table(table_name, engine) if model is None else model
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
     s = Session()
-    s.bulk_insert_mappings(table, data)
+    s.bulk_insert_mappings(model, data)
     s.commit()
 
 
