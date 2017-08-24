@@ -11,6 +11,7 @@ import googleads.adwords
 import pandas as pd
 from sqlalchemy.sql import text
 from sqlalchemy.exc import OperationalError
+from collections import Mapping
 
 from . import utils
 from . import config
@@ -46,6 +47,7 @@ class AdWords:
         self.client = google_ads_client
         self.services = {}
         self.engine = sqlutils.get_connection()
+        self.table_models = {}
 
     def service(self, service_name):
         if service_name not in self.services:
@@ -602,6 +604,18 @@ class AdWords:
                 'operation text)'.format(table_name)
         with self.engine.begin() as conn:
             conn.execute(query)
+        self.table_models[table_name] = sqlutils.get_model_from_table(table_name, self.engine)
+
+    def insert(self, table_name, data, if_exists='append'):
+        model = self.table_models.get(table_name)
+        if model is None or if_exists == 'replace':
+            self.create_operations_table(table_name, if_exists=if_exists)
+            model = self.table_models.get(table_name)
+        if isinstance(data, Mapping):
+            data = [{'client_id': data['client_id'], 'operation': json.dumps(data)}]
+        else:
+            data = iter({'client_id': entry['client_id'], 'operation': json.dumps(entry)} for entry in data)
+        sqlutils.bulk_insert(self.engine, table_name, data, model)
 
     def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
         logger.info('Dumping dataframe data to table...')
