@@ -2,25 +2,26 @@ import csv
 import datetime
 import inspect
 import io
+import json
 import logging
 import time
-import json
+from collections import Mapping
 from io import StringIO
-import yaml
+
 import googleads.adwords
 import pandas as pd
-from sqlalchemy.sql import text
+import yaml
 from sqlalchemy.exc import OperationalError
-from collections import Mapping
+from sqlalchemy.sql import text
 
-from . import utils
-from . import config
 from . import adwordsapi
+from . import config
 from . import sqlite as sqlutils
+from . import utils
 from .adwordsapi import common
 from .adwordsapi import operations
-from .adwordsapi.sync_job_service import SyncJobService
 from .adwordsapi.managed_customer_service import ManagedCustomerService
+from .adwordsapi.sync_job_service import SyncJobService
 
 logger = logging.getLogger(__name__)
 
@@ -742,7 +743,7 @@ class AdWords:
 
         def build_new_keyword_operation(internal_operation):
             # check if this operation is associated with an adgroup and not a keyword
-            if internal_operation['keyword_id '] > -1:
+            if internal_operation['keyword_id'] > -1:
                 yield operations.add_biddable_adgroup_criterion_operation(
                     int(internal_operation['adgroup_id']),
                     'SET',
@@ -803,7 +804,7 @@ class AdWords:
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
 
         def build_status_operation(internal_operation):
-            if internal_operation['old_status '] != internal_operation['new_status']:
+            if internal_operation['old_status'] != internal_operation['new_status']:
                 yield operations.add_biddable_adgroup_criterion_operation(
                     int(internal_operation['adgroup_id']),
                     'SET',
