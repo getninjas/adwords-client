@@ -157,7 +157,7 @@ class BaseService(SudsFactory):
         soap_header.userAgent = self.client.user_agent
         self.suds_client.set_options(
             soapheaders=soap_header,
-            headers=self.client.oauth2_client.CreateHttpHeader()
+            headers=self.client.oauth2_client.CreateHttpHeader(),
         )
         return self.ResultProcessor(self.suds_client.service.get, self.helper.selector)
 
