@@ -45,9 +45,6 @@ class RedshiftMapper:
             query = 'select * from {}'.format(full_table_name)
 
         df = pd.read_sql(query, self.get_engine())
-        # map fields
-        # if self.table_mappings:
-        #     df.rename(columns={value: key for key, value in self.table_mappings.items()}, inplace=True)
         client.dump_table(df, table_name, table_mappings=self.table_mappings)
 
     def upsync(self, client, source_table, target_table, drop_table=False):
