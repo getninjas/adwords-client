@@ -8,6 +8,7 @@ from .common import API_VERSION
 
 logger = logging.getLogger(__name__)
 
+
 def gunzip_csv(data, fields):
     logger.debug('Creating stream from data...')
     byte_stream = BytesIO(data)
