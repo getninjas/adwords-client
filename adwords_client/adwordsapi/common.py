@@ -4,7 +4,7 @@ from suds import TypeNotFound
 
 logger = logging.getLogger(__name__)
 
-API_VERSION = 'v201705'
+API_VERSION = 'v201708'
 REPORTS_DEFINITIONS = {
     'BASE_PATH': 'https://developers.google.com/adwords/api/docs/appendix/reports/',
     'CAMPAIGN_NEGATIVE_KEYWORDS_PERFORMANCE_REPORT': 'campaign-negative-keywords-performance-report.csv',
@@ -157,13 +157,9 @@ class BaseService(SudsFactory):
         soap_header.userAgent = self.client.user_agent
         self.suds_client.set_options(
             soapheaders=soap_header,
-            headers=self.client.oauth2_client.CreateHttpHeader())
-
+            headers=self.client.oauth2_client.CreateHttpHeader(),
+        )
         return self.ResultProcessor(self.suds_client.service.get, self.helper.selector)
-
-        # alternative call that uses google's adwords api to package the
-        # suds object at the cost of rebuilding the objects
-        # return self.get_page(self.service.get(self.helper.selector))
 
     def mutate(self, client_customer_id=None):
         if client_customer_id:
@@ -176,10 +172,9 @@ class BaseService(SudsFactory):
         soap_header.userAgent = self.client.user_agent
         self.suds_client.set_options(
             soapheaders=soap_header,
-            headers=self.client.oauth2_client.CreateHttpHeader())
-        # return self.ResultProcessor(self.suds_client.service.mutate, self.helper.operations)
+            headers=self.client.oauth2_client.CreateHttpHeader()
+        )
         return self.ResultProcessor(self.service.mutate, self.helper.operations)
-        # return self.get_result(self.service.mutate(self.helper.operations))
 
 
 class BaseSelector(SudsFactory):

@@ -67,3 +67,4 @@ local/
 !.travis.yml
 googleads*.yaml
 scratch.py
+*.env

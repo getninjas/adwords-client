@@ -43,65 +43,6 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
         self._last_temporary_id -= 1
         return self._last_temporary_id
 
-    def add_biddable_adgroup_criterion_operation(self,
-                                                 adgroup_id,
-                                                 operator,
-                                                 xsi_type,
-                                                 criteria_id=None,
-                                                 criterion_params={},
-                                                 **kwargs):
-        criterion = {'xsi_type': xsi_type}
-        if criteria_id:
-            criterion['id'] = criteria_id
-        for key in criterion_params:
-            criterion[key] = criterion_params[key]
-
-        operand = {
-            'xsi_type': 'BiddableAdGroupCriterion',
-            'criterion': criterion,
-            'adGroupId': adgroup_id,
-        }
-        for key in kwargs:
-            operand[key] = kwargs[key]
-
-        operation = {
-            'xsi_type': 'AdGroupCriterionOperation',
-            'operand': operand,
-            'operator': operator
-        }
-        self.add_operation(operation)
-
-    def add_adgroup_operation(self, campaign_id, adgroup_id, operator):
-        operation = {
-            'xsi_type': 'AdGroupOperation',
-            'operand': {
-                'xsi_type': 'AdGroup',
-                'campaignId': campaign_id,
-                'id': adgroup_id,
-            },
-            'operator': operator,
-        }
-        self.add_operation(operation)
-
-    def add_bidding_strategy_configuration(self, xsi_type, value):
-        if 'biddingStrategyConfiguration' not in self.last_operation['operand']:
-            bidding_strategy = {'xsi_type': 'BiddingStrategyConfiguration', 'bids': []}
-            self.last_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
-        bid_type = {'xsi_type': xsi_type}
-        bid_type['bid'] = {'xsi_type': 'Money'}
-        bid_type['bid']['microAmount'] = value
-        self.last_operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
-
-    def add_campaign_label_operation(self, campaign_id, operator, label_id):
-        operation = {
-            'xsi_type': 'CampaignLabelOperation',
-            'operator': operator,
-            'operand': {'xsi_type': 'CampaignLabel',
-                        'campaignId': campaign_id,
-                        'labelId': label_id}
-        }
-        self.add_operation(operation)
-
     def upload_operations(self, is_last=False):
         fail_counter = 0
         done = True

@@ -5,9 +5,35 @@ import sqlite3
 import tempfile
 
 import sqlalchemy
+import sqlalchemy.orm
+from sqlalchemy.ext.automap import automap_base
 
 logger = logging.getLogger(__name__)
 TEMPORARY_FILES = []
+
+
+def itertable(engine, table_name):
+    model = get_model_from_table(table_name, engine)
+    Session = sqlalchemy.orm.sessionmaker(bind=engine)
+    s = Session()
+    for instance in s.query(model).order_by(model.id):
+        yield instance
+
+
+def bulk_insert(engine, table_name, data, model=None):
+    model = get_model_from_table(table_name, engine) if model is None else model
+    Session = sqlalchemy.orm.sessionmaker(bind=engine)
+    s = Session()
+    s.bulk_insert_mappings(model, data)
+    s.commit()
+
+
+def get_model_from_table(table_name, engine):
+    metadata = sqlalchemy.MetaData()
+    metadata.reflect(engine, only=[table_name])
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    return getattr(Base.classes, table_name)
 
 
 def sqlite_add_function(conn, f, function_name=None):
