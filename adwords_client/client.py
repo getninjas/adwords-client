@@ -4,6 +4,7 @@ import inspect
 import io
 import logging
 import time
+import json
 from io import StringIO
 import yaml
 import googleads.adwords
@@ -18,6 +19,7 @@ from . import sqlite as sqlutils
 from .adwordsapi import common
 from .adwordsapi import operations
 from .adwordsapi.sync_job_service import SyncJobService
+from .adwordsapi.managed_customer_service import ManagedCustomerService
 
 logger = logging.getLogger(__name__)
 
@@ -581,59 +583,80 @@ class AdWords:
         return min_value
 
     def load_table(self, table_name):
-        logger.info('Table data data...')
         query = 'select * from {}'.format(table_name)
         data = pd.read_sql_query(query, self.engine)
         return data
 
-    def dump_table(self, df, table_name, table_mappings=None, index=False, if_exists='replace', **kwargs):
+    def iter_operations_table(self, table_name):
+        for operation in sqlutils.itertable(self.engine, table_name):
+            yield operation.client_id, json.loads(operation.operation)
+
+    def create_operations_table(self, table_name, if_exists='replace'):
+        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        if if_exists == 'replace':
+            with self.engine.begin() as conn:
+                conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
+        query = 'create table if not exists {} (' \
+                'id INTEGER PRIMARY KEY AUTOINCREMENT, ' \
+                'client_id INTEGER, ' \
+                'operation text)'.format(table_name)
+        with self.engine.begin() as conn:
+            conn.execute(query)
+
+    def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
         logger.info('Dumping dataframe data to table...')
         renamed_df = df
         if table_mappings:
             renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
-        renamed_df.to_sql(table_name, self.engine, if_exists=if_exists, index=index, **kwargs)
+        self.create_operations_table(table_name, if_exists=if_exists)
+        data = iter({'client_id': entry['client_id'], 'operation': json.dumps(entry)}
+                    for entry in renamed_df.to_dict(orient='records'))
+        sqlutils.bulk_insert(self.engine, table_name, data)
 
     def _setup_operations(self, table_name, batchlog_table):
         self.create_batch_operation_log(batchlog_table)
         bjs = self.service('BatchJobService')
-        accounts = self.load_table(table_name)
-        return bjs, accounts
+        operations = self.iter_operations_table(table_name)
+        return bjs, operations
 
     def _execute_operations(self, bjs, operations, batchlog_table, operation_builder):
-        for client_id, account_operations in operations.groupby('client_id'):
-            bjs.prepare_job(int(client_id))
-            self.log_batchjob(batchlog_table, bjs)
-            batch_size = 5000
-            in_batch = 0
-            for internal_operation in account_operations.itertuples():
-                for operation in operation_builder(internal_operation):
-                    if operation:
-                        if in_batch > 0 and in_batch % batch_size == 0:
-                            bjs.helper.upload_operations()
-                        bjs.helper.add_operation(operation)
-                        in_batch += 1
-
-            bjs.helper.upload_operations(is_last=True)
+        previous_client_id = None
+        batch_size = 5000
+        for client_id, internal_operation in operations:
+            if client_id != previous_client_id:
+                if previous_client_id is not None:
+                    bjs.helper.upload_operations(is_last=True)
+                previous_client_id = client_id
+                bjs.prepare_job(int(client_id))
+                self.log_batchjob(batchlog_table, bjs)
+                in_batch = 0
+            for operation in operation_builder(internal_operation):
+                if operation:
+                    if in_batch > 0 and in_batch % batch_size == 0:
+                        bjs.helper.upload_operations()
+                    bjs.helper.add_operation(operation)
+                    in_batch += 1
+        bjs.helper.upload_operations(is_last=True)
 
     def modify_bids(self, table_name, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
         def build_bid_change_operation(internal_operation):
-            old_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation.old_bid)
-            new_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation.new_bid)
+            old_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation['old_bid'])
+            new_bid = utils.MAPPERS['Bid'].to_adwords(internal_operation['new_bid'])
             if new_bid != old_bid:
                 # TODO: check if this operation is associated with an adgroup and not a keyword, should not exist
-                if internal_operation.keyword_id > -1:
+                if internal_operation['keyword_id '] > -1:
                     yield operations.add_keyword_cpc_bid_adjustment_operation(
-                        utils.MAPPERS['Long'].to_adwords(internal_operation.adgroup_id),
-                        utils.MAPPERS['Long'].to_adwords(internal_operation.keyword_id),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation['adgroup_id']),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation['keyword_id']),
                         new_bid,
                     )
                 else:
                     yield operations.add_adgroup_cpc_bid_adjustment_operation(
-                        utils.MAPPERS['Long'].to_adwords(internal_operation.campaign_id),
-                        utils.MAPPERS['Long'].to_adwords(internal_operation.adgroup_id),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation['campaign_id']),
+                        utils.MAPPERS['Long'].to_adwords(internal_operation['adgroup_id']),
                         new_bid,
                     )
             else:
@@ -670,31 +693,30 @@ class AdWords:
         mappers.update(operations.add_campaign.__annotations__)
 
         def build_new_keyword_operation(internal_operation):
-            operation_kwargs = internal_operation._asdict()
-            object_type = operation_kwargs.pop('object_type')
+            object_type = internal_operation.pop('object_type')
             if object_type == 'keyword':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
-                                    for k, v in operation_kwargs.items()}
-                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
-                yield operations.add_new_keyword_operation(**operation_kwargs)
-            elif internal_operation.object_type == 'adgroup':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
-                                    for k, v in operation_kwargs.items()}
-                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
-                yield operations.add_adgroup(**operation_kwargs)
-            elif internal_operation.object_type == 'ad':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
-                                    for k, v in operation_kwargs.items()}
-                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
-                yield operations.add_ad(**operation_kwargs)
-            elif internal_operation.object_type == 'campaign':
-                operation_kwargs = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
-                                    for k, v in operation_kwargs.items()}
-                operation_kwargs = {k: v for k, v in operation_kwargs.items() if v is not None}
-                if operation_kwargs.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation_kwargs:
-                    operation_kwargs['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
-                    yield operations.add_budget(**operation_kwargs)
-                yield operations.add_campaign(**operation_kwargs)
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                      for k, v in internal_operation.items()}
+                internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
+                yield operations.add_new_keyword_operation(**internal_operation)
+            elif object_type == 'adgroup':
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                      for k, v in internal_operation.items()}
+                internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
+                yield operations.add_adgroup(**internal_operation)
+            elif object_type == 'ad':
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                      for k, v in internal_operation.items()}
+                internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
+                yield operations.add_ad(**internal_operation)
+            elif object_type == 'campaign':
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                                      for k, v in internal_operation.items()}
+                internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
+                if internal_operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in internal_operation:
+                    internal_operation['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
+                    yield operations.add_budget(**internal_operation)
+                yield operations.add_campaign(**internal_operation)
             else:
                 yield None
 
@@ -706,20 +728,20 @@ class AdWords:
 
         def build_new_keyword_operation(internal_operation):
             # check if this operation is associated with an adgroup and not a keyword
-            if internal_operation.keyword_id > -1:
+            if internal_operation['keyword_id '] > -1:
                 yield operations.add_biddable_adgroup_criterion_operation(
-                    int(internal_operation.adgroup_id),
+                    int(internal_operation['adgroup_id']),
                     'SET',
                     'Keyword',
-                    int(internal_operation.keyword_id),
+                    int(internal_operation['keyword_id']),
                     userStatus='PAUSED'
                 )
                 yield operations.add_new_keyword_operation(
-                    int(internal_operation.adgroup_id),
-                    internal_operation.new_text,
-                    internal_operation.keyword_match_type.upper(),
-                    internal_operation.status.upper(),
-                    int(internal_operation.cpc_bid)
+                    int(internal_operation['adgroup_id']),
+                    internal_operation['new_text'],
+                    internal_operation['keyword_match_type'].upper(),
+                    internal_operation['status'].upper(),
+                    int(internal_operation['cpc_bid'])
                 )
             else:
                 yield None
@@ -731,9 +753,10 @@ class AdWords:
         bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
 
         def build_budget_operation(internal_operation):
-            yield from operations.add_adgroup_label_operation(
-                adgroup_id='%.0f' % internal_operation.adgroup_id,
-                label_id='%.0f' % internal_operation.label_id
+            yield from operations.apply_new_budget(
+                campaign_id='%.0f' % internal_operation['campaign_id'],  # 3.14 -> '3'
+                amount=internal_operation['amount'],
+                id_builder=bjs.get_temporary_id
             )
 
         self._execute_operations(bjs, accounts, batchlog_table, build_budget_operation)
@@ -743,10 +766,9 @@ class AdWords:
         bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
 
         def build_adgroup_label_operation(internal_operation):
-            yield from operations.apply_new_budget(
-                campaign_id='%.0f' % internal_operation.campaign_id,  # 3.14 -> '3'
-                amount=internal_operation.amount,
-                id_builder=bjs.get_temporary_id
+            yield from operations.add_adgroup_label_operation(
+                adgroup_id='%.0f' % internal_operation['adgroup_id'],
+                label_id='%.0f' % internal_operation['label_id']
             )
 
         self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_label_operation)
@@ -757,8 +779,8 @@ class AdWords:
 
         def build_adgroup_name_operation(internal_operation):
             yield from operations.set_adgroup_name_operation(
-                adgroup_id='%.0f' % internal_operation.adgroup_id,
-                name=internal_operation.name
+                adgroup_id='%.0f' % internal_operation['adgroup_id'],
+                name=internal_operation['name']
             )
 
         self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_name_operation)
@@ -767,13 +789,13 @@ class AdWords:
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
 
         def build_status_operation(internal_operation):
-            if internal_operation.old_status != internal_operation.new_status:
+            if internal_operation['old_status '] != internal_operation['new_status']:
                 yield operations.add_biddable_adgroup_criterion_operation(
-                    int(internal_operation.adgroup_id),
+                    int(internal_operation['adgroup_id']),
                     'SET',
                     'Keyword',
-                    int(internal_operation.keyword_id),
-                    userStatus=internal_operation.new_status
+                    int(internal_operation['keyword_id']),
+                    userStatus=internal_operation['new_status']
                 )
             else:
                 yield None
@@ -798,3 +820,7 @@ class AdWords:
                 )
 
             sjs.mutate(client_id, operations_list, 'LabelService')
+
+    def get_accounts(self, client_id=None):
+        mcs = ManagedCustomerService(self.client)
+        return {k[1]: v[1] for k, v in mcs.get_customers(client_id)}
