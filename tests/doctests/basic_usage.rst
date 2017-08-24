@@ -10,6 +10,8 @@ Client creation
 
 .. setup:
     >>> import pandas as pd
+    >>> import logging
+    >>> logging.basicConfig(level=logging.INFO)
     >>> client.get_campaigns_report(7857288943, 'setup_test_table', 'CampaignStatus != "REMOVED"', create_table=True)
     >>> new_report_df = client.load_table('setup_test_table')
     >>> objects = []
