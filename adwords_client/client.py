@@ -628,7 +628,20 @@ class AdWords:
                     for entry in renamed_df.to_dict(orient='records'))
         sqlutils.bulk_insert(self.engine, table_name, data)
 
+    def count_table(self, table_name):
+        with self.engine.begin() as conn:
+            try:
+                query = 'select count(*) from {table_name};'.format(table_name=table_name)
+                for row in conn.execute(query):
+                    count = row[0]
+            except OperationalError:
+                pass
+        return count
+
     def _setup_operations(self, table_name, batchlog_table):
+        n_entries = self.count_table(table_name)
+        if n_entries == 0:
+            raise ValueError('Table provided has no data...')
         self.create_batch_operation_log(batchlog_table)
         bjs = self.service('BatchJobService')
         operations = self.iter_operations_table(table_name)
