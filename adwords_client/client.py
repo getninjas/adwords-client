@@ -578,9 +578,9 @@ class AdWords:
             for column in args:
                 try:
                     query = 'select min({column}) from {table_name};'.format(column=column, table_name=table_name)
-                    for row in conn.execute(query):
-                        if min_value > row[0]:
-                            min_value = row[0]
+                    row = conn.execute(query).fetchone()
+                    if row[0] is not None and min_value > row[0]:
+                        min_value = row[0]
                 except OperationalError:
                     pass
         return min_value
@@ -640,9 +640,9 @@ class AdWords:
 
     def _setup_operations(self, table_name, batchlog_table):
         n_entries = self.count_table(table_name)
+        self.create_batch_operation_log(batchlog_table)
         if n_entries == 0:
             return None, []
-        self.create_batch_operation_log(batchlog_table)
         bjs = self.service('BatchJobService')
         operations = self.iter_operations_table(table_name)
         return bjs, operations
