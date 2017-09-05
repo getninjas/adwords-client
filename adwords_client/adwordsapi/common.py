@@ -1,6 +1,7 @@
 import requests
 import logging
 from suds import TypeNotFound
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ REPORTS_DEFINITIONS = {
 }
 
 
+@lru_cache()
 def get_report_csv(report_type):
     # TODO: download the csv version associated with the version of the api
     csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
