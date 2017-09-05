@@ -641,7 +641,7 @@ class AdWords:
     def _setup_operations(self, table_name, batchlog_table):
         n_entries = self.count_table(table_name)
         if n_entries == 0:
-            raise ValueError('Table provided has no data...')
+            return None, []
         self.create_batch_operation_log(batchlog_table)
         bjs = self.service('BatchJobService')
         operations = self.iter_operations_table(table_name)
@@ -664,7 +664,8 @@ class AdWords:
                         bjs.helper.upload_operations()
                     bjs.helper.add_operation(operation)
                     in_batch += 1
-        bjs.helper.upload_operations(is_last=True)
+        if bjs is not None:
+            bjs.helper.upload_operations(is_last=True)
 
     def modify_bids(self, table_name, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
@@ -834,6 +835,11 @@ class AdWords:
     def create_labels(self, table_name):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         query = 'select * from {}'.format(table_name)
+
+        n_entries = self.count_table(table_name)
+        if n_entries == 0:
+            return
+
         df = pd.read_sql_query(query, self.engine)
         # Specific stuff ahead
 
