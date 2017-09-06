@@ -578,9 +578,9 @@ class AdWords:
             for column in args:
                 try:
                     query = 'select min({column}) from {table_name};'.format(column=column, table_name=table_name)
-                    for row in conn.execute(query):
-                        if min_value > row[0]:
-                            min_value = row[0]
+                    row = conn.execute(query).fetchone()
+                    if row[0] is not None and min_value > row[0]:
+                        min_value = row[0]
                 except OperationalError:
                     pass
         return min_value
@@ -628,8 +628,21 @@ class AdWords:
                     for entry in renamed_df.to_dict(orient='records'))
         sqlutils.bulk_insert(self.engine, table_name, data)
 
+    def count_table(self, table_name):
+        with self.engine.begin() as conn:
+            try:
+                query = 'select count(*) from {table_name};'.format(table_name=table_name)
+                for row in conn.execute(query):
+                    count = row[0]
+            except OperationalError:
+                pass
+        return count
+
     def _setup_operations(self, table_name, batchlog_table):
+        n_entries = self.count_table(table_name)
         self.create_batch_operation_log(batchlog_table)
+        if n_entries == 0:
+            return None, []
         bjs = self.service('BatchJobService')
         operations = self.iter_operations_table(table_name)
         return bjs, operations
@@ -651,7 +664,8 @@ class AdWords:
                         bjs.helper.upload_operations()
                     bjs.helper.add_operation(operation)
                     in_batch += 1
-        bjs.helper.upload_operations(is_last=True)
+        if bjs is not None:
+            bjs.helper.upload_operations(is_last=True)
 
     def modify_bids(self, table_name, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
@@ -821,6 +835,11 @@ class AdWords:
     def create_labels(self, table_name):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         query = 'select * from {}'.format(table_name)
+
+        n_entries = self.count_table(table_name)
+        if n_entries == 0:
+            return
+
         df = pd.read_sql_query(query, self.engine)
         # Specific stuff ahead
 
