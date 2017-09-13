@@ -51,10 +51,10 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        return self.adapter(value) if not isnull(value) else None
+        return self.adapter(value)
 
     def from_adwords(self, value):
-        return self.converter(value) if not isnull(value) else None
+        return self.converter(value)
 
     @property
     def from_adwords_func(self):
@@ -67,4 +67,5 @@ MAPPERS = {
     'Double': AdwordsMapper(process_double, float),
     'Integer': AdwordsMapper(process_integer, int),
     'String': AdwordsMapper(str, str),
+    'Identity': AdwordsMapper(lambda x: x, lambda x: x),
 }
