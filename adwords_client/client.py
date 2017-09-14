@@ -618,7 +618,10 @@ class AdWords:
 
     @staticmethod
     def _get_dict_min_value(data):
-        return min(int(u) for u in data.values() if type(u) == int or (type(u) == str and u.lstrip('-').isdigit()))
+        return min(
+            int(u) for u in data.values()
+            if type(u) == int or (type(u) == str and u.lstrip('-').isdigit())
+        )
 
     def insert(self, table_name, data, if_exists='append'):
         model = self.table_models.get(table_name)
