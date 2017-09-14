@@ -53,11 +53,11 @@ def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
     yield set_campaign_budget(budget_id, campaign_id)
 
 
-def add_ad(adgroup_id: 'Long',
-           headline1: 'String',
-           headline2: 'String',
-           description: 'String',
-           urls: 'String',
+def add_ad(adgroup_id: 'Long' = None,
+           headline1: 'String' = None,
+           headline2: 'String' = None,
+           description: 'String' = None,
+           urls: 'String' = None,
            ad_id: 'Long' = None,
            adtype: 'String' = 'ExpandedTextAd',
            **kwargs):
@@ -126,8 +126,8 @@ def build_keyword(text, keyword_id=None, match='BROAD'):
     return result
 
 
-def add_campaign(campaign_id: 'Long',
-                 campaign_name: 'String',
+def add_campaign(campaign_id: 'Long' = None,
+                 campaign_name: 'String' = None,
                  budget_id: 'Long' = None,
                  status: 'String' = 'PAUSED',
                  advertising_channel: 'String' = 'SEARCH',
@@ -156,6 +156,50 @@ def add_campaign(campaign_id: 'Long',
     }
     if budget_id:
         operation['operand']['budget'] = {'budgetId': budget_id}
+    return operation
+
+
+def add_campaign_language(campaign_id: 'Long' = None,
+                          language_id: 'Long' = None,
+                          operator: 'String' = 'ADD',
+                          **kwargs):
+    operation = {
+        # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation
+        'xsi_type': 'CampaignCriterionOperation',
+        'operator': operator.upper(),
+        'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterion
+            'xsi_type': 'CampaignCriterion',
+            'campaignId': campaign_id,
+            'criterion': {
+                # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.Language
+                'xsi_type': 'Language',
+                'id': language_id,
+            }
+        },
+    }
+    return operation
+
+
+def add_campaign_location(campaign_id: 'Long' = None,
+                          location_id: 'Long' = None,
+                          operator: 'String' = 'ADD',
+                          **kwargs):
+    operation = {
+        # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation
+        'xsi_type': 'CampaignCriterionOperation',
+        'operator': operator.upper(),
+        'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterion
+            'xsi_type': 'CampaignCriterion',
+            'campaignId': campaign_id,
+            'criterion': {
+                # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.Location
+                'xsi_type': 'Location',
+                'id': location_id,
+            }
+        },
+    }
     return operation
 
 
@@ -202,11 +246,11 @@ def set_campaign_budget(budget_id, campaign_id):
     }
 
 
-def add_budget(budget: 'Money',
-               budget_id: 'Long',
+def add_budget(budget: 'Money' = None,
+               budget_id: 'Long' = None,
                delivery: 'String' = 'ACCELERATED',
                budget_name: 'String' = None,
-                **kwargs):
+               **kwargs):
     operation = {
         'xsi_type': 'BudgetOperation',
         'operator': 'ADD',
@@ -326,11 +370,11 @@ def add_new_keyword_operation(adgroup_id: 'Long' = None,
     return new_keyword_operation
 
 
-def add_adgroup(campaign_id: 'Long',
-                adgroup_id: 'Long',
-                adgroup_name: 'String',
-                status: 'String' ='PAUSED',
-                operator: 'String' ='ADD',
+def add_adgroup(campaign_id: 'Long' = None,
+                adgroup_id: 'Long' = None,
+                adgroup_name: 'String' = None,
+                status: 'String' = 'PAUSED',
+                operator: 'String' = 'ADD',
                 **kwargs):
     operation = {
         'xsi_type': 'AdGroupOperation',

@@ -20,20 +20,26 @@ REPORTS_DEFINITIONS = {
     'BUDGET_PERFORMANCE_REPORT': 'budget-performance-report.csv',
     'LABEL_REPORT': 'label-report.csv',
 }
+# https://developers.google.com/adwords/api/docs/appendix/geotargeting
+LOCATIONS_URL = 'https://goo.gl/2BXevL'
+
+
+@lru_cache()
+def get_locations_csv():
+    return requests.get(LOCATIONS_URL).content.decode('utf-8')
 
 
 @lru_cache()
 def get_report_csv(report_type):
-    # TODO: download the csv version associated with the version of the api
     csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
                             REPORTS_DEFINITIONS[report_type])
     result = requests.get(csv_url)
     if result.status_code == 200:
-        return result
+        return requests.get(csv_url).content.decode('utf-8')
     csv_url = '{}{}/{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
                                API_VERSION,
                                REPORTS_DEFINITIONS[report_type])
-    return requests.get(csv_url)
+    return requests.get(csv_url).content.decode('utf-8')
 
 
 class SudsFactory:

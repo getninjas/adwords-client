@@ -49,6 +49,7 @@ class AdWords:
         self.services = {}
         self.engine = sqlutils.get_connection()
         self.table_models = {}
+        self.table_min_id = {}
 
     def service(self, service_name):
         if service_name not in self.services:
@@ -63,7 +64,7 @@ class AdWords:
         simple_download = kwargs.pop('simple_download', False)
         only_fields = kwargs.pop('fields', None)
         report_csv = common.get_report_csv(report_type)
-        report_csv = dict((item['Name'], item) for item in csv.DictReader(StringIO(report_csv.content.decode('utf-8'))))
+        report_csv = dict((item['Name'], item) for item in csv.DictReader(StringIO(report_csv)))
         to_remove = set([name for name, item in report_csv.items() if
                          (item['Behavior'] in exclude_behavior  # remove based on variable behavior
                           or any(term in name for term in exclude_terms)  # remove for some terms
@@ -538,21 +539,25 @@ class AdWords:
                 if data:
                     conn.execute(query, *data)
 
+    def get_pending_batchjobs(self, batch_table):
+        query = """
+                    select
+                        client_id,
+                        batchjob_id as id,
+                        status
+                    from {}
+                    where status <> 'DONE' and status <> 'CANCELED'
+                    """.format(batch_table)
+        accounts = sqlutils.dict_query(self.engine, query, 1, 1)
+        return accounts
+
     def update_log_tables(self, bjs, batch_table):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        query = """
-            select
-                client_id,
-                batchjob_id as id,
-                status
-            from {}
-            where status <> 'DONE' and status <> 'CANCELED'
-            """.format(batch_table)
-        accounts = sqlutils.dict_query(self.engine, query, 1, 1)
+        accounts = self.get_pending_batchjobs(batch_table)
         if len(accounts) > 0:
             result = bjs.get_multiple_status(accounts)
             self.set_batchjob_status(batch_table, accounts, result)
-            accounts = sqlutils.dict_query(self.engine, query, 1, 1)
+            accounts = self.get_pending_batchjobs(batch_table)
         return accounts
 
     def exponential_backoff(self, *args, **kwargs):
@@ -561,6 +566,10 @@ class AdWords:
 
     def wait_jobs(self, batchlog_table='batchlog_table'):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        self.create_batch_operation_log(batchlog_table)
+        accounts = self.get_pending_batchjobs(batchlog_table)
+        if len(accounts) == 0:
+            return
         sleep_time = 15
         logger.info('Getting operations data...')
         bjs = self.service('BatchJobService')
@@ -607,16 +616,35 @@ class AdWords:
             conn.execute(query)
         self.table_models[table_name] = sqlutils.get_model_from_table(table_name, self.engine)
 
+    @staticmethod
+    def _get_dict_min_value(data):
+        return min(
+            int(u) for u in data.values()
+            if type(u) == int or (type(u) == str and u.lstrip('-').isdigit())
+        )
+
     def insert(self, table_name, data, if_exists='append'):
         model = self.table_models.get(table_name)
         if model is None or if_exists == 'replace':
             self.create_operations_table(table_name, if_exists=if_exists)
             model = self.table_models.get(table_name)
         if isinstance(data, Mapping):
+            self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(data))
             data = [{'client_id': data['client_id'], 'operation': json.dumps(data)}]
         else:
-            data = iter({'client_id': entry['client_id'], 'operation': json.dumps(entry)} for entry in data)
+            def make_entry(entry):
+                nonlocal self, table_name
+                self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
+                return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
+
+            data = iter(make_entry(entry) for entry in data)
         sqlutils.bulk_insert(self.engine, table_name, data, model)
+
+    def clear(self, table_name):
+        with self.engine.begin() as conn:
+            conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
+        self.table_models.pop(table_name, None)
+        self.table_min_id.pop(table_name, None)
 
     def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
         logger.info('Dumping dataframe data to table...')
@@ -635,7 +663,7 @@ class AdWords:
                 for row in conn.execute(query):
                     count = row[0]
             except OperationalError:
-                pass
+                count = 0
         return count
 
     def _setup_operations(self, table_name, batchlog_table):
@@ -704,12 +732,10 @@ class AdWords:
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
-        local_objects_ids = int(self.get_min_value(table_name, 'id', 'adgroup_id', 'campaign_id'))
-
         def get_next_id():
-            nonlocal local_objects_ids
-            local_objects_ids -= 1
-            return local_objects_ids
+            nonlocal self, table_name
+            self.table_min_id[table_name] -= 1
+            return self.table_min_id[table_name]
 
         mappers = {
             'client_id': 'Long',
@@ -724,28 +750,34 @@ class AdWords:
         def build_new_keyword_operation(internal_operation):
             object_type = internal_operation.pop('object_type')
             if object_type == 'keyword':
-                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}
                 internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
                 yield operations.add_new_keyword_operation(**internal_operation)
             elif object_type == 'adgroup':
-                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}
                 internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
                 yield operations.add_adgroup(**internal_operation)
             elif object_type == 'ad':
-                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}
                 internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
                 yield operations.add_ad(**internal_operation)
             elif object_type == 'campaign':
-                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'String')].to_adwords(v)
+                internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}
                 internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
                 if internal_operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in internal_operation:
                     internal_operation['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
                     yield operations.add_budget(**internal_operation)
                 yield operations.add_campaign(**internal_operation)
+                for language_id in internal_operation.get('languages', [1014]):  # default is Portuguese
+                    language_id = utils.MAPPERS['Long'].to_adwords(language_id)
+                    yield operations.add_campaign_language(language_id=language_id, **internal_operation)
+                for location_id in internal_operation.get('locations', []):
+                    location_id = utils.MAPPERS['Long'].to_adwords(location_id)
+                    yield operations.add_campaign_location(location_id=location_id, **internal_operation)
             else:
                 yield None
 
