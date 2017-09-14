@@ -88,27 +88,6 @@ def remove_temporary_files():
             pass
 
 
-def dict_query(conn, query, n_key=1, *args):
-    data = conn.execute(query).fetchall()
-    result = {}
-    args = [n_key] + list(args)
-    for row in data:
-        key_pos = 0
-        curr_dict = result
-        for n_key in args[:-1]:
-            key = tuple(row[key_pos:key_pos + n_key]) if n_key > 1 else row[key_pos]
-            if key not in curr_dict:
-                curr_dict[key] = {}
-            key_pos += n_key
-            curr_dict = curr_dict[key]
-        n_key = args[-1]
-        key = tuple(row[key_pos:key_pos + n_key]) if n_key > 1 else row[key_pos]
-        if key not in curr_dict:
-            curr_dict[key] = []
-        curr_dict[key].append(row)
-    return result
-
-
 def create_index(engine, table_name, *args):
     idx_name = '_'.join(args)
     idx_fields = ', '.join(args)

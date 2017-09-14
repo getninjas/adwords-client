@@ -75,6 +75,11 @@ class RedshiftMapper:
             cli.upload_file(from_file, self.bucket, remote_temp)
         return remote_temp
 
+    def drop_table(self, table_name):
+        logger.info('Dropping table...')
+        with self.lock, self.get_engine().begin() as conn:
+            conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
+
     def dataframe_to_redshift(self,
                               df,
                               to_table,
@@ -93,10 +98,7 @@ class RedshiftMapper:
 
         try:
             if drop_table:
-                logger.info('Dropping destination table...')
-                with self.lock, self.get_engine().begin() as conn:
-                    conn.execute('DROP TABLE IF EXISTS {}'.format(to_table))
-
+                self.drop_table(to_table)
             logger.info('Creating destination table...')
             dtype = dict((u, String(65535)) for u in dict(df.dtypes[df.dtypes == 'object']))
             query = pd.io.sql.get_schema(df, to_table, con=self.get_engine(), dtype=dtype)
