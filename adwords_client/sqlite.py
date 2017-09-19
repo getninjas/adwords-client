@@ -13,7 +13,10 @@ TEMPORARY_FILES = []
 
 
 def itertable(engine, table_name):
-    model = get_model_from_table(table_name, engine)
+    try:
+        model = get_model_from_table(table_name, engine)
+    except AttributeError:
+        return
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
     s = Session()
     for instance in s.query(model).order_by(model.id):
