@@ -1,7 +1,5 @@
 import re
 import math
-import typing
-from pandas import isnull
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -51,14 +49,21 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        return self.adapter(value)
+        if value and (type(value) != float or (type(value) == float and not math.isnan(value))):
+            return self.adapter(value)
+        else:
+            return None
 
     def from_adwords(self, value):
-        return self.converter(value)
+        if value and (type(value) != float or (type(value) == float and not math.isnan(value))):
+            return self.converter(value)
+        else:
+            return None
 
     @property
     def from_adwords_func(self):
         return self.converter
+
 
 MAPPERS = {
     'Money': AdwordsMapper(raw_money_as_cents, cents_as_money),
