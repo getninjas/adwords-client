@@ -1,14 +1,77 @@
 from adwords_client.client import AdWords
+from adwords_client.client_operations import ClientOperation
+from adwords_client.mappers.sqlite import SqliteMapper
+from adwords_client.sqlite import get_connection
 import logging
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
 logging.getLogger('oauth2client').setLevel(logging.ERROR)
 
 
-def test_pipeline():
+def get_conn():
+    return get_connection('test_db.sqlite')
+
+
+def test_client_operations():
+    objects = [
+        {
+            'object_type': 'campaign',
+            'client_id': 7857288943,
+            'campaign_id': -1,
+            'budget': 1000,
+            'campaign_name': 'API test campaign'
+        },
+        {
+            'object_type': 'adgroup',
+            'client_id': 7857288943,
+            'campaign_id': -1,
+            'adgroup_id': -2,
+            'adgroup_name': 'API test adgroup',
+        },
+        {
+            'object_type': 'keyword',
+            'client_id': 7857288943,
+            'campaign_id': -1,
+            'adgroup_id': -2,
+            'text': 'my search term',
+            'keyword_match_type': 'broad',
+            'status': 'paused',
+            'cpc_bid': 13.37,
+        },
+    ]
+    df = pd.DataFrame.from_dict(objects)
+    df.to_sql('create_table', get_conn(), index=False, if_exists='replace')
+
+    operation_fields = {
+        'adgroup_id': 'adgroup_id',
+        'adgroup_name': 'adgroup_name',
+        'budget': 'budget',
+        'campaign_id': 'campaign_id',
+        'campaign_name': 'campaign_name',
+        'client_id': 'client_id',
+        'cpc_bid': 'cpc_bid',
+        'keyword_match_type': 'keyword_match_type',
+        'object_type': 'object_type',
+        'status': 'status',
+        'text': 'text',
+    }
+
+    mapper = SqliteMapper(operation_fields, get_conn)
+    op = ClientOperation(mapper)
+
+    op.run(AdWords.sync_objects, 'create_table', batchlog_table='batchlog_table')
+
+    mapper = SqliteMapper({}, get_conn)
+    op = ClientOperation(mapper)
+
+    op.run(AdWords.wait_jobs, 'batchlog_table', batchlog_table='batchlog_table',
+           drop_batchlog_table=True, n_procs=1)
+
+
+def test_client():
     client = AdWords.autoload()
-    client.wait_jobs()
 
     client.get_campaigns_report(7857288943, 'campaigns_report', 'CampaignStatus != "REMOVED"', create_table=True)
     new_report_df = client.load_table('campaigns_report')
