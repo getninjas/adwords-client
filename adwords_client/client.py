@@ -7,6 +7,8 @@ import logging
 import time
 from collections import Mapping
 from io import StringIO
+from pandas import isnull
+from math import floor
 
 import googleads.adwords
 import pandas as pd
@@ -481,26 +483,7 @@ class AdWords:
 
     def create_batch_operation_log(self, table_name, drop=False):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        if drop:
-            with self.engine:
-                self.engine.execute('DROP TABLE IF EXISTS {}'.format(table_name))
-        query = """
-        create table if not exists {} (
-        creation_time text,
-        client_id int,
-        batchjob_id int,
-        upload_url text,
-        result_url text,
-        metadata text,
-        status text,
-        PRIMARY KEY (creation_time, client_id, batchjob_id))
-        """.format(table_name)
-        with self.engine.begin() as conn:
-            conn.execute(query)
-        sqlutils.create_index(self.engine, table_name, 'creation_time', 'client_id')
-        sqlutils.create_index(self.engine, table_name, 'client_id')
-        sqlutils.create_index(self.engine, table_name, 'batchjob_id')
-        sqlutils.create_index(self.engine, table_name, 'creation_time')
+        self.create_operations_table(table_name, 'replace' if drop else 'append')
 
     def log_batchjob(self, table_name, batchjob_service, comment=''):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
@@ -515,71 +498,68 @@ class AdWords:
                 'result_url': '',
                 'metadata': comment,
                 'status': batchjob_status}
-        sqlutils.execute(self.engine, table_name, 'insert', data)
+        self.insert(table_name, data)
 
     def set_batchjob_status(self, jobs_table, old_jobs, jobs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         query = text("""
         UPDATE {}
         SET
-          status = :status,
-          result_url = :result_url
+          operation = :operation
         WHERE
-          client_id = :client_id
-          AND batchjob_id = :batchjob_id
+          id = :row_id
         """.format(jobs_table))
         with self.engine.begin() as conn:
             for client_id in jobs:
-                data = [{'status': job['status'],
-                         'result_url': job['downloadUrl'].url if 'downloadUrl' in job else '',
-                         'client_id': client_id,
-                         'batchjob_id': job['id']}
-                        for job in jobs[client_id]
-                        if job['status'] != old_jobs[client_id][job['id']][0]['status']]
-                if data:
-                    conn.execute(query, *data)
+                updates = []
+                for job in jobs[client_id]:
+                    old_job = old_jobs[client_id][job['id']]
+                    if job['status'] != old_job['data']['status']:
+                        old_job['data'].update({
+                            'status': job['status'],
+                            'result_url': job['downloadUrl'].url if 'downloadUrl' in job else '',
+                            'client_id': client_id,
+                            'batchjob_id': job['id']
+                        })
+                        updates.append({'row_id': old_job['id'], 'operation': json.dumps(old_job['data'])})
+                if updates:
+                    conn.execute(query, *updates)
 
-    def get_pending_batchjobs(self, batch_table):
-        query = """
-                    select
-                        client_id,
-                        batchjob_id as id,
-                        status
-                    from {}
-                    where status <> 'DONE' and status <> 'CANCELED'
-                    """.format(batch_table)
-        accounts = sqlutils.dict_query(self.engine, query, 1, 1)
-        return accounts
+    def get_batchjobs(self, batch_table):
+        batchjobs = {}
+        for operation in sqlutils.itertable(self.engine, batch_table):
+            row_id = operation.id
+            client_id = operation.client_id
+            data = json.loads(operation.operation)
+            if data['status'] != 'DONE' and data['status'] != 'CANCELED':
+                batchjobs.setdefault(client_id, {})[data['batchjob_id']] = {'id': row_id, 'data': data}
+        return batchjobs
 
-    def update_log_tables(self, bjs, batch_table):
+    def update_log_tables(self, bjs, batch_table, accounts):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        accounts = self.get_pending_batchjobs(batch_table)
         if len(accounts) > 0:
             result = bjs.get_multiple_status(accounts)
             self.set_batchjob_status(batch_table, accounts, result)
-            accounts = self.get_pending_batchjobs(batch_table)
+            accounts = self.get_batchjobs(batch_table)
         return accounts
 
     def exponential_backoff(self, *args, **kwargs):
         logger.warning('DEPRECATED: use wait_jobs instead...')
         return self.wait_jobs(*args, **kwargs)
 
-    def wait_jobs(self, batchlog_table='batchlog_table'):
+    def wait_jobs(self, jobs_table='batchlog_table', **kwargs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        self.create_batch_operation_log(batchlog_table)
-        accounts = self.get_pending_batchjobs(batchlog_table)
-        if len(accounts) == 0:
-            return
+        self.create_batch_operation_log(jobs_table)
+        accounts = self.get_batchjobs(jobs_table)
         sleep_time = 15
-        logger.info('Getting operations data...')
-        bjs = self.service('BatchJobService')
-
-        accounts = [True]  # forcing first loop, wait 15s by default
+        bjs = None
         while len(accounts) > 0:
+            if not bjs:
+                bjs = self.service('BatchJobService')
             logger.info('Waiting for batch jobs to finish...')
             time.sleep(sleep_time)
             sleep_time *= 2
-            accounts = self.update_log_tables(bjs, batchlog_table)
+            accounts = self.update_log_tables(bjs, jobs_table, accounts)
 
     def get_min_value(self, table_name, *args):
         min_value = 0
@@ -598,6 +578,11 @@ class AdWords:
         query = 'select * from {}'.format(table_name)
         data = pd.read_sql_query(query, self.engine)
         return data
+
+    def flatten_table(self, from_table, to_table):
+        data = list(d for _, d in self.iter_operations_table(from_table))
+        df = pd.DataFrame(data) if data else pd.DataFrame(columns=['id'])
+        df.to_sql(to_table, self.engine, index=False, if_exists='replace')
 
     def iter_operations_table(self, table_name):
         for operation in sqlutils.itertable(self.engine, table_name):
@@ -619,9 +604,15 @@ class AdWords:
     @staticmethod
     def _get_dict_min_value(data):
         return min(
-            int(u) for u in data.values()
-            if type(u) == int or (type(u) == str and u.lstrip('-').isdigit())
+            int(floor(u)) for u in data.values()
+            if type(u) == int
+            or (type(u) == float and not isnull(u))
+            or (type(u) == str and u.lstrip('-').isdigit())
         )
+
+    def _make_entry(self, table_name, entry):
+        self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
+        return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
 
     def insert(self, table_name, data, if_exists='append'):
         model = self.table_models.get(table_name)
@@ -629,15 +620,9 @@ class AdWords:
             self.create_operations_table(table_name, if_exists=if_exists)
             model = self.table_models.get(table_name)
         if isinstance(data, Mapping):
-            self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(data))
-            data = [{'client_id': data['client_id'], 'operation': json.dumps(data)}]
+            data = [self._make_entry(table_name, data)]
         else:
-            def make_entry(entry):
-                nonlocal self, table_name
-                self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
-                return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
-
-            data = iter(make_entry(entry) for entry in data)
+            data = iter(self._make_entry(table_name, entry) for entry in data)
         sqlutils.bulk_insert(self.engine, table_name, data, model)
 
     def clear(self, table_name):
@@ -652,7 +637,7 @@ class AdWords:
         if table_mappings:
             renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
         self.create_operations_table(table_name, if_exists=if_exists)
-        data = iter({'client_id': entry['client_id'], 'operation': json.dumps(entry)}
+        data = iter(self._make_entry(table_name, entry)
                     for entry in renamed_df.to_dict(orient='records'))
         sqlutils.bulk_insert(self.engine, table_name, data)
 
@@ -772,7 +757,7 @@ class AdWords:
                     internal_operation['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
                     yield operations.add_budget(**internal_operation)
                 yield operations.add_campaign(**internal_operation)
-                for language_id in internal_operation.get('languages', [1014]):  # default is Portuguese
+                for language_id in internal_operation.get('languages', []):
                     language_id = utils.MAPPERS['Long'].to_adwords(language_id)
                     yield operations.add_campaign_language(language_id=language_id, **internal_operation)
                 for location_id in internal_operation.get('locations', []):

@@ -13,7 +13,10 @@ TEMPORARY_FILES = []
 
 
 def itertable(engine, table_name):
-    model = get_model_from_table(table_name, engine)
+    try:
+        model = get_model_from_table(table_name, engine)
+    except AttributeError:
+        return
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
     s = Session()
     for instance in s.query(model).order_by(model.id):
@@ -86,27 +89,6 @@ def remove_temporary_files():
             os.remove(file_name)
         except:
             pass
-
-
-def dict_query(conn, query, n_key=1, *args):
-    data = conn.execute(query).fetchall()
-    result = {}
-    args = [n_key] + list(args)
-    for row in data:
-        key_pos = 0
-        curr_dict = result
-        for n_key in args[:-1]:
-            key = tuple(row[key_pos:key_pos + n_key]) if n_key > 1 else row[key_pos]
-            if key not in curr_dict:
-                curr_dict[key] = {}
-            key_pos += n_key
-            curr_dict = curr_dict[key]
-        n_key = args[-1]
-        key = tuple(row[key_pos:key_pos + n_key]) if n_key > 1 else row[key_pos]
-        if key not in curr_dict:
-            curr_dict[key] = []
-        curr_dict[key].append(row)
-    return result
 
 
 def create_index(engine, table_name, *args):

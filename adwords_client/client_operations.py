@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def timestamp_client_table(client, table_name, timestamp):
-    df = pd.read_sql_table(table_name, client.engine)
+    df = client.load_table(table_name)
     df['tmstmp'] = timestamp
     df.to_sql(table_name, client.engine, if_exists='replace', index=False)
 
@@ -25,22 +25,19 @@ def adwords_worker(timestamp,
     config_file_path = kwargs.pop('config_file', None)
     adwords = AdWords.autoload(config_file_path)
     try:
+        drop_batchlog_table = kwargs.pop('drop_batchlog_table', False)
+        if drop_batchlog_table and total_procs > 1:
+            raise RuntimeError('Dropping tables is not allowed when running with multiprocessing...')
         mapper.set_lock(LOCK)
         if kwargs.pop('map_data', True):
             mapper.map_data(adwords, internal_table, proc_id, total_procs)
-        # remove operations log table argument before function call
-        operations_log_table = kwargs.pop('operations_log_table', None)
-        drop_batchlog_table = kwargs.pop('drop_batchlog_table', False)
-        drop_operations_log_table = kwargs.pop('drop_operations_log_table', False)
         # keep this argument since batch operations write to this table locally
         batchlog_table = kwargs.get('batchlog_table', None)
         operation_function(adwords, internal_table, *args, **kwargs)
         if batchlog_table:
-            timestamp_client_table(adwords, batchlog_table, timestamp)
-            mapper.upsync(adwords, batchlog_table, batchlog_table, drop_table=drop_batchlog_table)
-        if operations_log_table:
-            timestamp_client_table(adwords, internal_table, timestamp)
-            mapper.upsync(adwords, internal_table, operations_log_table, drop_table=drop_operations_log_table)
+            adwords.flatten_table(batchlog_table, batchlog_table + '_temp')
+            timestamp_client_table(adwords, batchlog_table + '_temp', timestamp)
+            mapper.upsync(adwords, batchlog_table + '_temp', batchlog_table, drop_table=drop_batchlog_table)
         mapper.set_lock(None)
     except Exception as e:
         logger.exception(e)
@@ -67,7 +64,7 @@ class ClientOperation:
         child_args = []
         # only use multiprocessing if working with batch jobs
         batchlog_table = kwargs.get('batchlog_table', False)
-        n_procs = kwargs.pop('n_procs', cpu_count() + 1) if batchlog_table else 1
+        n_procs = kwargs.pop('n_procs', cpu_count() + 1 if batchlog_table else 1)
         timestamp = datetime.now().isoformat()
         if self.config_file:
             kwargs['config_file'] = self.config_file
