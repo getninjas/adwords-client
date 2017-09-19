@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def timestamp_client_table(client, table_name, timestamp):
-    df = pd.read_sql_table(table_name, client.engine)
+    df = client.load_table(table_name)
     df['tmstmp'] = timestamp
     df.to_sql(table_name, client.engine, if_exists='replace', index=False)
 
@@ -35,8 +35,9 @@ def adwords_worker(timestamp,
         batchlog_table = kwargs.get('batchlog_table', None)
         operation_function(adwords, internal_table, *args, **kwargs)
         if batchlog_table:
-            timestamp_client_table(adwords, batchlog_table, timestamp)
-            mapper.upsync(adwords, batchlog_table, batchlog_table, drop_table=drop_batchlog_table)
+            adwords.flatten_table(batchlog_table, batchlog_table + '_temp')
+            timestamp_client_table(adwords, batchlog_table + '_temp', timestamp)
+            mapper.upsync(adwords, batchlog_table + '_temp', batchlog_table, drop_table=drop_batchlog_table)
         mapper.set_lock(None)
     except Exception as e:
         logger.exception(e)
@@ -63,7 +64,7 @@ class ClientOperation:
         child_args = []
         # only use multiprocessing if working with batch jobs
         batchlog_table = kwargs.get('batchlog_table', False)
-        n_procs = kwargs.pop('n_procs', cpu_count() + 1) if batchlog_table else 1
+        n_procs = kwargs.pop('n_procs', cpu_count() + 1 if batchlog_table else 1)
         timestamp = datetime.now().isoformat()
         if self.config_file:
             kwargs['config_file'] = self.config_file

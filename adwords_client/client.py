@@ -7,6 +7,8 @@ import logging
 import time
 from collections import Mapping
 from io import StringIO
+from pandas import isnull
+from math import floor
 
 import googleads.adwords
 import pandas as pd
@@ -545,10 +547,10 @@ class AdWords:
         logger.warning('DEPRECATED: use wait_jobs instead...')
         return self.wait_jobs(*args, **kwargs)
 
-    def wait_jobs(self, batchlog_table='batchlog_table'):
+    def wait_jobs(self, jobs_table='batchlog_table', **kwargs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        self.create_batch_operation_log(batchlog_table)
-        accounts = self.get_batchjobs(batchlog_table)
+        self.create_batch_operation_log(jobs_table)
+        accounts = self.get_batchjobs(jobs_table)
         sleep_time = 15
         bjs = None
         while len(accounts) > 0:
@@ -557,7 +559,7 @@ class AdWords:
             logger.info('Waiting for batch jobs to finish...')
             time.sleep(sleep_time)
             sleep_time *= 2
-            accounts = self.update_log_tables(bjs, batchlog_table, accounts)
+            accounts = self.update_log_tables(bjs, jobs_table, accounts)
 
     def get_min_value(self, table_name, *args):
         min_value = 0
@@ -576,6 +578,11 @@ class AdWords:
         query = 'select * from {}'.format(table_name)
         data = pd.read_sql_query(query, self.engine)
         return data
+
+    def flatten_table(self, from_table, to_table):
+        data = list(d for _, d in self.iter_operations_table(from_table))
+        df = pd.DataFrame(data) if data else pd.DataFrame(columns=['id'])
+        df.to_sql(to_table, self.engine, index=False, if_exists='replace')
 
     def iter_operations_table(self, table_name):
         for operation in sqlutils.itertable(self.engine, table_name):
@@ -597,9 +604,15 @@ class AdWords:
     @staticmethod
     def _get_dict_min_value(data):
         return min(
-            int(u) for u in data.values()
-            if type(u) == int or (type(u) == str and u.lstrip('-').isdigit())
+            int(floor(u)) for u in data.values()
+            if type(u) == int
+            or (type(u) == float and not isnull(u))
+            or (type(u) == str and u.lstrip('-').isdigit())
         )
+
+    def _make_entry(self, table_name, entry):
+        self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
+        return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
 
     def insert(self, table_name, data, if_exists='append'):
         model = self.table_models.get(table_name)
@@ -607,15 +620,9 @@ class AdWords:
             self.create_operations_table(table_name, if_exists=if_exists)
             model = self.table_models.get(table_name)
         if isinstance(data, Mapping):
-            self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(data))
-            data = [{'client_id': data['client_id'], 'operation': json.dumps(data)}]
+            data = [self._make_entry(table_name, data)]
         else:
-            def make_entry(entry):
-                nonlocal self, table_name
-                self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
-                return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
-
-            data = iter(make_entry(entry) for entry in data)
+            data = iter(self._make_entry(table_name, entry) for entry in data)
         sqlutils.bulk_insert(self.engine, table_name, data, model)
 
     def clear(self, table_name):
@@ -630,7 +637,7 @@ class AdWords:
         if table_mappings:
             renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
         self.create_operations_table(table_name, if_exists=if_exists)
-        data = iter({'client_id': entry['client_id'], 'operation': json.dumps(entry)}
+        data = iter(self._make_entry(table_name, entry)
                     for entry in renamed_df.to_dict(orient='records'))
         sqlutils.bulk_insert(self.engine, table_name, data)
 
@@ -750,7 +757,7 @@ class AdWords:
                     internal_operation['budget_id'] = utils.MAPPERS['Long'].to_adwords(get_next_id())
                     yield operations.add_budget(**internal_operation)
                 yield operations.add_campaign(**internal_operation)
-                for language_id in internal_operation.get('languages', [1014]):  # default is Portuguese
+                for language_id in internal_operation.get('languages', []):
                     language_id = utils.MAPPERS['Long'].to_adwords(language_id)
                     yield operations.add_campaign_language(language_id=language_id, **internal_operation)
                 for location_id in internal_operation.get('locations', []):
