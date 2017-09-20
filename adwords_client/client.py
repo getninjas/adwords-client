@@ -603,12 +603,18 @@ class AdWords:
 
     @staticmethod
     def _get_dict_min_value(data):
-        return min(
-            int(floor(u)) for u in data.values()
-            if type(u) == int
-            or (type(u) == float and not isnull(u))
-            or (type(u) == str and u.lstrip('-').isdigit())
-        )
+        try:
+            return min(
+                int(floor(u)) for u in data.values()
+                if isinstance(u, int)
+                or (isinstance(u, float) and not isnull(u))
+                or (isinstance(u, str) and u.lstrip('-').isdigit())
+            )
+        except ValueError:
+            logger.debug('Problem getting min value for: {}'.format(str(data)))
+            for k, v in data.items():
+                logger.debug('Key: {} ({}) Value: {} ({})'.format(str(k), str(type(k)), str(v), str(type(v))))
+            raise
 
     def _make_entry(self, table_name, entry):
         self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))

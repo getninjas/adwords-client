@@ -49,13 +49,13 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        if value and (type(value) != float or (type(value) == float and not math.isnan(value))):
+        if value and (not isinstance(value, float) or (isinstance(value, float) and not math.isnan(value))):
             return self.adapter(value)
         else:
             return None
 
     def from_adwords(self, value):
-        if value and (type(value) != float or (type(value) == float and not math.isnan(value))):
+        if value and (not isinstance(value, float) or (isinstance(value, float) and not math.isnan(value))):
             return self.converter(value)
         else:
             return None
