@@ -7,8 +7,7 @@ import logging
 import time
 from collections import Mapping
 from io import StringIO
-from numpy import isfinite
-from math import floor
+from math import floor, isfinite
 
 import googleads.adwords
 import pandas as pd
