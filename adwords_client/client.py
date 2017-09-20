@@ -7,8 +7,7 @@ import logging
 import time
 from collections import Mapping
 from io import StringIO
-from pandas import isnull
-from math import floor
+from math import floor, isfinite
 
 import googleads.adwords
 import pandas as pd
@@ -26,6 +25,15 @@ from .adwordsapi.managed_customer_service import ManagedCustomerService
 from .adwordsapi.sync_job_service import SyncJobService
 
 logger = logging.getLogger(__name__)
+
+
+def _iter_floats(data):
+    for item in data:
+        try:
+            if item and isfinite(item):
+                yield float(item)
+        except (TypeError, ValueError):
+            pass
 
 
 class AdWords:
@@ -603,12 +611,13 @@ class AdWords:
 
     @staticmethod
     def _get_dict_min_value(data):
-        return min(
-            int(floor(u)) for u in data.values()
-            if type(u) == int
-            or (type(u) == float and not isnull(u))
-            or (type(u) == str and u.lstrip('-').isdigit())
-        )
+        try:
+            return min(int(floor(u)) for u in _iter_floats(data.values()))
+        except ValueError:
+            logger.debug('Problem getting min value for: {}'.format(str(data)))
+            for k, v in data.items():
+                logger.debug('Key: {} ({}) Value: {} ({})'.format(str(k), str(type(k)), str(v), str(type(v))))
+            raise
 
     def _make_entry(self, table_name, entry):
         self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))

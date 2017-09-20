@@ -16,12 +16,12 @@ class SqliteMapper:
     def set_lock(self, lock):
         self.lock = lock
 
-    def get_engine(self):
+    def _get_engine(self):
         if not self.engine:
             self.engine = self.connection_factory()
         return self.engine
 
-    def map_data(self, client, table_name, group_id, n_groups):
+    def downsync(self, client, table_name, group_id, n_groups):
         full_table_name = table_name
 
         # build query, only split data if campaign_id exists
@@ -36,7 +36,7 @@ class SqliteMapper:
                                'reading full data in all workers')
             query = 'select * from {}'.format(full_table_name)
 
-        df = pd.read_sql(query, self.get_engine())
+        df = pd.read_sql(query, self._get_engine())
         client.dump_table(df, table_name, table_mappings=self.table_mappings)
 
     def upsync(self, client, source_table, target_table, drop_table=False):
@@ -50,5 +50,5 @@ class SqliteMapper:
 
     def drop_table(self, table_name):
         logger.info('Dropping table...')
-        with self.lock, self.get_engine().begin() as conn:
+        with self.lock, self._get_engine().begin() as conn:
             conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))

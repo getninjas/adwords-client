@@ -30,7 +30,7 @@ def adwords_worker(timestamp,
             raise RuntimeError('Dropping tables is not allowed when running with multiprocessing...')
         mapper.set_lock(LOCK)
         if kwargs.pop('map_data', True):
-            mapper.map_data(adwords, internal_table, proc_id, total_procs)
+            mapper.downsync(adwords, internal_table, proc_id, total_procs)
         # keep this argument since batch operations write to this table locally
         batchlog_table = kwargs.get('batchlog_table', None)
         operation_function(adwords, internal_table, *args, **kwargs)
