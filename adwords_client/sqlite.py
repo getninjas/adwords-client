@@ -19,7 +19,7 @@ def itertable(engine, table_name):
         return
     Session = sqlalchemy.orm.sessionmaker(bind=engine)
     s = Session()
-    for instance in s.query(model).order_by(model.id):
+    for instance in s.query(model).order_by(model.client_id, model.id):
         yield instance
 
 

@@ -45,8 +45,8 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
 
     def upload_operations(self, is_last=False):
         fail_counter = 0
-        done = True
-        while done:
+        done = False
+        while not done:
             try:
                 if is_last:
                     logger.info('Uploading final data...')
@@ -55,7 +55,7 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
                 self.upload_helper.UploadOperations(list(self.operations.values()), is_last=is_last)
                 self.operations = {}
                 self.last_operation = None
-                done = False
+                done = True
             except Exception as e:
                 fail_counter += 1
                 if fail_counter > 2:

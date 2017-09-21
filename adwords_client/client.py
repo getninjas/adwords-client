@@ -607,6 +607,7 @@ class AdWords:
                 'operation text)'.format(table_name)
         with self.engine.begin() as conn:
             conn.execute(query)
+        sqlutils.create_index(self.engine, table_name, 'id', 'client_id')
         self.table_models[table_name] = sqlutils.get_model_from_table(table_name, self.engine)
 
     @staticmethod
