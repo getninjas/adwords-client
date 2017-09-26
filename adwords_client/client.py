@@ -738,7 +738,7 @@ class AdWords:
         }
         mappers.update(operations.add_new_keyword_operation.__annotations__)
         mappers.update(operations.add_adgroup.__annotations__)
-        mappers.update(operations.add_ad.__annotations__)
+        mappers.update(operations.add_expanded_ad.__annotations__)
         mappers.update(operations.add_budget.__annotations__)
         mappers.update(operations.add_campaign.__annotations__)
 
@@ -758,7 +758,7 @@ class AdWords:
                 internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}
                 internal_operation = {k: v for k, v in internal_operation.items() if v is not None}
-                yield operations.add_ad(**internal_operation)
+                yield operations.add_expanded_ad(**internal_operation)
             elif object_type == 'campaign':
                 internal_operation = {k: utils.MAPPERS[mappers.get(k, 'Identity')].to_adwords(v)
                                       for k, v in internal_operation.items()}

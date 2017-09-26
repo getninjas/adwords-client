@@ -1,7 +1,4 @@
 import logging
-import uuid
-
-from .. import utils
 
 logger = logging.getLogger(__name__)
 
@@ -51,43 +48,6 @@ def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
 
     logger.debug("Apply budget '%s' to campaign '%s'" % (budget_id, campaign_id))
     yield set_campaign_budget(budget_id, campaign_id)
-
-
-def add_ad(adgroup_id: 'Long' = None,
-           headline1: 'String' = None,
-           headline2: 'String' = None,
-           description: 'String' = None,
-           urls: 'String' = None,
-           ad_id: 'Long' = None,
-           adtype: 'String' = 'ExpandedTextAd',
-           **kwargs):
-    ad_dict = build_ad(headline1, headline2, description, urls, ad_id, adtype)
-    operation = {
-        'xsi_type': 'AdGroupAdOperation',
-        'operand': {
-            # https://developers.google.com/adwords/api/docs/reference/v201705/AdGroupAdService.AdGroupAd
-            'xsi_type': 'AdGroupAd',
-            'adGroupId': adgroup_id,
-            'ad': ad_dict,
-            'status': 'PAUSED',
-            # TODO: 'labels': [],
-        },
-        'operator': 'ADD'
-    }
-    return operation
-
-
-def build_ad(headline1, headline2, description, urls, ad_id=None, adtype='ExpandedTextAd'):
-    result = {
-        'xsi_type': adtype,
-        'headlinePart1': headline1,
-        'headlinePart2': headline2,
-        'description': description,
-        'finalUrls': list(urls),
-    }
-    if ad_id:
-        result['id'] = ad_id
-    return result
 
 
 def add_restriction(adgroup_id, restriction_dict, effect='SHOW'):
@@ -368,6 +328,112 @@ def add_new_keyword_operation(adgroup_id: 'Long' = None,
     bid_type = build_new_bid_type('CpcBid', cpc_bid)
     new_keyword_operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
     return new_keyword_operation
+
+
+def expanded_text_ad(headline_part_1='',
+                     headline_part_2='',
+                     description='',
+                     path_1='',
+                     path_2='',
+                     tracking_url_template=None,
+                     url_customer_parameters=None,
+                     final_urls=None,
+                     final_mobile_urls=None,
+                     final_app_urls=None):
+    # https://developers.google.com/adwords/api/docs/reference/v201708/AdGroupAdService.Ad
+    # https://developers.google.com/adwords/api/docs/reference/v201708/AdGroupAdService.ExpandedTextAd
+    ad = {
+        'xsi_type': 'ExpandedTextAd',
+
+        # Expanded text ads fields
+        'headlinePart1': headline_part_1,
+        'headlinePart2': headline_part_2,
+        'description': description,
+        'path1': path_1,
+        'path2': path_2,
+
+        # Specify a list of final mobile URLs. This field cannot be set if URL
+        # field is set, or finalUrls is unset. This may be specified at ad,
+        # criterion, and feed item levels.
+        'finalMobileUrls': [
+            'http://mobile.example.com/cruise/space/',
+            'http://mobile.example.com/locations/mars/'
+        ]
+    }
+    # we assume at this point that only one final url will be set
+    if final_urls:
+        # Specify a list of final URLs. This field cannot be set if URL
+        # field is set, or finalUrls is unset. This may be specified at ad,
+        # criterion, and feed item levels.
+        ad['finalUrls'] = [final_urls],
+    # we assume at this point that only one final url will be set
+    if final_mobile_urls:
+        # Specify a list of final URLs. This field cannot be set if URL
+        # field is set, or finalUrls is unset. This may be specified at ad,
+        # criterion, and feed item levels.
+        ad['finalMobileUrls'] = [final_mobile_urls],
+        # we assume at this point that only one final url will be set
+    if final_app_urls:
+        # Specify a list of final URLs. This field cannot be set if URL
+        # field is set, or finalUrls is unset. This may be specified at ad,
+        # criterion, and feed item levels.
+        ad['finalAppUrls'] = [final_app_urls],
+    if final_urls:
+        # Specify a list of final URLs. This field cannot be set if URL
+        # field is set, or finalUrls is unset. This may be specified at ad,
+        # criterion, and feed item levels.
+        ad['finalUrls'] = [final_urls],
+    if tracking_url_template:
+        # Specify a tracking URL for 3rd party tracking provider. You may specify
+        # one at customer, campaign, ad group, ad, criterion or feed item levels.
+        ad['trackingUrlTemplate'] = tracking_url_template
+    if url_customer_parameters:
+        # Values for the parameters in the tracking URL. This can be provided at
+        # campaign, ad group, ad, criterion, or feed item levels.
+        parameters = []
+        ad['urlCustomParameters'] = {'parameters': parameters}
+        for k, v in url_customer_parameters.items():
+            parameters.append({'key': k, 'value': v})
+    return ad
+
+
+def add_expanded_ad(adgroup_id: 'Long' = None,
+                    status: 'String' = 'PAUSED',
+                    operator: 'String' = 'ADD',
+                    headline_part_1: 'String' = '',
+                    headline_part_2: 'String' = '',
+                    description: 'String' = '',
+                    path_1: 'String' = '',
+                    path_2: 'String' = '',
+                    tracking_url_template: 'String' = None,
+                    url_customer_parameters: 'String' = None,
+                    final_urls: 'String' = None,
+                    final_mobile_urls: 'String' = None,
+                    final_app_urls: 'String' = None,
+                    **kwargs):
+    operation = {
+        'xsi_type': 'AdGroupAdOperation',
+        'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201708/AdGroupAdService.AdGroupAd
+            'xsi_type': 'AdGroupAd',
+            'adGroupId': adgroup_id,
+            'ad': expanded_text_ad(
+                headline_part_1,
+                headline_part_2,
+                description,
+                path_1,
+                path_2,
+                tracking_url_template,
+                url_customer_parameters,
+                final_urls,
+                final_mobile_urls,
+                final_app_urls,
+            ),
+            'status': status,
+        },
+        'operator': operator,
+    }
+    return operation
 
 
 def add_adgroup(campaign_id: 'Long' = None,
