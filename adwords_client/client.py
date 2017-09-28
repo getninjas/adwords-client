@@ -166,16 +166,19 @@ class AdWords:
                                *args, **kwargs)
 
     def get_ad_performance_report(self, customer_id, target_name, *args, **kwargs):
+        logger.debug('Running get_ad_performance_report...')
+        include_fields = kwargs.pop('include_fields', [])
+        exclude_fields = kwargs.pop('exclude_fields', ['BusinessName',
+                                                       'ConversionTypeName',
+                                                       'CriterionType',
+                                                       'CriterionId',
+                                                       'ClickType',
+                                                       'ConversionCategoryName',
+                                                       'ConversionTrackerId',
+                                                       'IsNegative'])
+        exclude_terms = kwargs.pop('exclude_terms', ['Significance', 'ActiveView', 'Average'])
+        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
         create_table = kwargs.pop('create_table', False)
-        exclude_fields = ['BusinessName',
-                          'ConversionTypeName',
-                          'CriterionType',
-                          'CriterionId',
-                          'ClickType',
-                          'ConversionCategoryName',
-                          'ConversionTrackerId',
-                          'IsNegative']
-        exclude_terms = ['Significance', 'ActiveView', 'Average']
         use_fields = kwargs.pop('fields', False)
         if use_fields:
             try:
@@ -196,12 +199,20 @@ class AdWords:
                     'Conversions',
                     'Cost',
                     'Status',
+                    'CreativeUrlCustomParameters',
+                    'CreativeTrackingUrlTemplate',
+                    'CreativeDestinationUrl',
+                    'CreativeFinalUrls',
+                    'CreativeFinalMobileUrls',
+                    'CreativeFinalAppUrls',
                     'Headline',
                     'HeadlinePart1',
                     'HeadlinePart2',
                     'Description',
                     'Description1',
                     'Description2',
+                    'Path1',
+                    'Path2',
                     'DisplayUrl',
                 ]
         return self.get_report('AD_PERFORMANCE_REPORT',
@@ -210,8 +221,8 @@ class AdWords:
                                create_table,
                                exclude_fields,
                                exclude_terms,
-                               ['Segment'],
-                               [],
+                               exclude_behavior,
+                               include_fields,
                                *args, **kwargs)
 
     def get_keywords_report(self, customer_id, target_name, *args, **kwargs):
@@ -330,16 +341,6 @@ class AdWords:
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'CampaignId')
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'CampaignName')
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'CustomerDescriptiveName',
-                              'CampaignName')
 
     def get_labels_report(self, customer_id, target_name, *args, **kwargs):
         """
@@ -445,16 +446,6 @@ class AdWords:
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'AdGroupId')
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'AdGroupName')
-        sqlutils.create_index(self.conn,
-                              target_name,
-                              'CustomerDescriptiveName',
-                              'AdGroupName')
 
     def get_campaigns_location_report(self, customer_id, target_name, *args, **kwargs):
         create_table = kwargs.pop('create_table', False)
