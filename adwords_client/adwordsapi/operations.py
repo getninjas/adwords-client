@@ -351,14 +351,6 @@ def expanded_text_ad(headline_part_1='',
         'description': description,
         'path1': path_1,
         'path2': path_2,
-
-        # Specify a list of final mobile URLs. This field cannot be set if URL
-        # field is set, or finalUrls is unset. This may be specified at ad,
-        # criterion, and feed item levels.
-        'finalMobileUrls': [
-            'http://mobile.example.com/cruise/space/',
-            'http://mobile.example.com/locations/mars/'
-        ]
     }
     # we assume at this point that only one final url will be set
     if final_urls:
