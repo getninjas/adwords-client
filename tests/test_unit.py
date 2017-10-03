@@ -14,7 +14,7 @@ def get_conn():
     return get_connection('test_db.sqlite')
 
 
-def test_client_operations():
+def _test_client_operations():
     objects = [
         {
             'object_type': 'campaign',
@@ -122,6 +122,22 @@ def test_client():
             'keyword_match_type': 'broad',
             'status': 'paused',
             'cpc_bid': 13.37,
+        }
+    )
+    client.insert(
+        'new_objects_table',
+        {
+            'object_type': 'ad',
+            'client_id': 7857288943,
+            'campaign_id': -1,
+            'adgroup_id': -2,
+            'headline_part_1': 'Ad test',
+            'headline_part_2': 'my pretty test',
+            'description': 'This is my test ad',
+            'path_1': 'test',
+            'path_2': 'ad',
+            'final_urls': 'http://www.mytest.com/',
+            'final_mobile_urls': 'http://m.mytest.com/',
         }
     )
     client.sync_objects('new_objects_table')
