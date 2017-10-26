@@ -707,6 +707,8 @@ class AdWords:
 
         self._execute_operations(bjs, accounts, batchlog_table, build_bid_change_operation)
 
+    # TODO: this method should instantiate a new classe (maybe SyncOperation) and transform the internal functions
+    # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
     def sync_objects(self, table_name, batchlog_table='batchlog_table'):
         """
         Possible columns in the table:
