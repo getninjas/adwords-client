@@ -33,12 +33,13 @@ def adwords_worker(timestamp,
             mapper.downsync(adwords, internal_table, proc_id, total_procs)
         # keep this argument since batch operations write to this table locally
         batchlog_table = kwargs.get('batchlog_table', None)
-        operation_function(adwords, internal_table, *args, **kwargs)
+        result = operation_function(adwords, internal_table, *args, **kwargs)
         if batchlog_table:
             adwords.flatten_table(batchlog_table, batchlog_table + '_temp')
             timestamp_client_table(adwords, batchlog_table + '_temp', timestamp)
             mapper.upsync(adwords, batchlog_table + '_temp', batchlog_table, drop_table=drop_batchlog_table)
         mapper.set_lock(None)
+        return result
     except Exception as e:
         logger.exception(e)
         raise e
@@ -81,4 +82,5 @@ class ClientOperation:
 
         lock = RLock()
         with Pool(n_procs, initializer=init_lock, initargs=(lock, )) as p:
-            p.starmap(kwargs_worker, child_args, 1)
+            results = p.starmap(kwargs_worker, child_args, 1)
+        return results
