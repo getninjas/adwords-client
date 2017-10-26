@@ -86,13 +86,13 @@ def build_keyword(text, keyword_id=None, match='BROAD'):
     return result
 
 
-def add_campaign(campaign_id: 'Long' = None,
-                 campaign_name: 'String' = None,
-                 budget_id: 'Long' = None,
-                 status: 'String' = 'PAUSED',
-                 advertising_channel: 'String' = 'SEARCH',
-                 operator: 'String' = 'ADD',
-                 **kwargs):
+def campaign_operation(campaign_id: 'Long' = None,
+                       campaign_name: 'String' = None,
+                       budget_id: 'Long' = None,
+                       status: 'String' = 'PAUSED',
+                       advertising_channel: 'String' = 'SEARCH',
+                       operator: 'String' = 'ADD',
+                       **kwargs):
     bidding_strategy = build_new_bidding_strategy_configuration(with_bids=False, strategy_type='MANUAL_CPC')
     operation = {
         'xsi_type': 'CampaignOperation',
@@ -101,7 +101,6 @@ def add_campaign(campaign_id: 'Long' = None,
             # https://developers.google.com/adwords/api/docs/reference/v201705/CampaignService.Campaign
             'xsi_type': 'Campaign',
             'id': campaign_id,
-            'name': campaign_name,
 
             ## From: https://developers.google.com/adwords/api/docs/samples/python/campaign-management#add-complete-campaigns-using-batch-jobs
             # 'advertisingChannelType': 'SEARCH',
@@ -109,13 +108,17 @@ def add_campaign(campaign_id: 'Long' = None,
             # stop the ads from immediately serving. Set to ENABLED once
             # you've added targeting and the ads are ready to serve.
             'status': status,
-            # Note that only the budgetId is required
-            'biddingStrategyConfiguration': bidding_strategy,
-            'advertisingChannelType': advertising_channel,
         },
     }
+    if campaign_name:
+        operation['operand']['name'] = campaign_name
+    # Note that only the budgetId is required
     if budget_id:
         operation['operand']['budget'] = {'budgetId': budget_id}
+    if bidding_strategy:
+        operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
+    if advertising_channel:
+        operation['operand']['advertisingChannelType'] = advertising_channel
     return operation
 
 
@@ -243,9 +246,9 @@ def build_money(money):
     }
 
 
-def add_biddable_adgroup_criterion_operation(adgroup_id,
-                                             operator,
-                                             xsi_type,
+def new_biddable_adgroup_criterion_operation(adgroup_id=None,
+                                             operator=None,
+                                             xsi_type=None,
                                              criteria_id=None,
                                              criterion_params={},
                                              **kwargs):
@@ -294,7 +297,7 @@ def build_new_bidding_strategy_configuration(with_bids=True, strategy_type=None)
 def add_keyword_cpc_bid_adjustment_operation(adgroup_id,
                                              criteria_id,
                                              value):
-    bid_operation = add_biddable_adgroup_criterion_operation(
+    bid_operation = new_biddable_adgroup_criterion_operation(
         adgroup_id,
         'SET',
         'Keyword',
@@ -307,28 +310,46 @@ def add_keyword_cpc_bid_adjustment_operation(adgroup_id,
     return bid_operation
 
 
-def add_new_keyword_operation(adgroup_id: 'Long' = None,
-                              text: 'String' = None,
-                              keyword_match_type: 'String' = None,
-                              status: 'String' = 'PAUSED',
-                              cpc_bid: 'Bid' = None,
-                              **kwargs):
-    new_keyword_operation = add_biddable_adgroup_criterion_operation(
-        adgroup_id,
-        'ADD',
-        'Keyword',
-        criterion_params={
-            'text': text,
-            'matchType': keyword_match_type.upper(),
-        },
-        userStatus=status.upper()
-    )
-    bidding_strategy = build_new_bidding_strategy_configuration()
-    new_keyword_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
-    bid_type = build_new_bid_type('CpcBid', cpc_bid)
-    new_keyword_operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
-    return new_keyword_operation
+def new_keyword_operation(adgroup_id: 'Long' = None,
+                          criteria_id: 'Long' = None,
+                          text: 'String' = None,
+                          keyword_match_type: 'String' = None,
+                          status: 'String' = None,
+                          cpc_bid: 'Bid' = None,
+                          operator: 'String' = 'ADD',
+                          **kwargs):
+    status = status.upper()
+    if not status and operator == 'ADD':
+        status = 'PAUSED'
+    operator = operator.upper()
 
+    operation = {
+        'xsi_type': 'AdGroupCriterionOperation',
+        'operand': {
+            'xsi_type': 'BiddableAdGroupCriterion',
+            'criterion': {'xsi_type': 'Keyword'},
+            'adGroupId': adgroup_id,
+        },
+        'operator': operator
+    }
+
+    if criteria_id:
+        operation['operand']['criterion']['id'] = criteria_id
+
+    if status:
+        operation['operand']['userStatus'] = status
+
+    if status != 'REMOVED' and keyword_match_type and text:
+        operation['operand']['criterion']['text'] = text
+        operation['operand']['criterion']['matchType'] = keyword_match_type.upper()
+
+    if status != 'REMOVED' and cpc_bid:
+        bidding_strategy = build_new_bidding_strategy_configuration()
+        bid_type = build_new_bid_type('CpcBid', cpc_bid)
+        operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
+        operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
+
+    return operation
 
 def expanded_text_ad(headline_part_1='',
                      headline_part_2='',
@@ -389,38 +410,52 @@ def expanded_text_ad(headline_part_1='',
     return ad
 
 
-def add_expanded_ad(adgroup_id: 'Long' = None,
-                    status: 'String' = 'PAUSED',
-                    operator: 'String' = 'ADD',
-                    headline_part_1: 'String' = '',
-                    headline_part_2: 'String' = '',
-                    description: 'String' = '',
-                    path_1: 'String' = '',
-                    path_2: 'String' = '',
-                    tracking_url_template: 'String' = None,
-                    url_customer_parameters: 'String' = None,
-                    final_urls: 'String' = None,
-                    final_mobile_urls: 'String' = None,
-                    final_app_urls: 'String' = None,
-                    **kwargs):
+def abstract_ad(ad_id: 'Long' = None):
+    ad = {
+        'xsi_type': 'Ad',
+        # Abstract ad for set and remove operations
+        'id': ad_id,
+    }
+    return ad
+
+
+def expanded_ad_operation(adgroup_id: 'Long' = None,
+                          ad_id: 'Long' = None,
+                          status: 'String' = 'PAUSED',
+                          operator: 'String' = 'ADD',
+                          headline_part_1: 'String' = '',
+                          headline_part_2: 'String' = '',
+                          description: 'String' = '',
+                          path_1: 'String' = '',
+                          path_2: 'String' = '',
+                          tracking_url_template: 'String' = None,
+                          url_customer_parameters: 'String' = None,
+                          final_urls: 'String' = None,
+                          final_mobile_urls: 'String' = None,
+                          final_app_urls: 'String' = None,
+                          **kwargs):
+    if operator.upper() == 'ADD':
+        ad = expanded_text_ad(
+                    headline_part_1,
+                    headline_part_2,
+                    description,
+                    path_1,
+                    path_2,
+                    tracking_url_template,
+                    url_customer_parameters,
+                    final_urls,
+                    final_mobile_urls,
+                    final_app_urls,
+                )
+    else:
+        ad = abstract_ad(ad_id)
     operation = {
         'xsi_type': 'AdGroupAdOperation',
         'operand': {
             # https://developers.google.com/adwords/api/docs/reference/v201708/AdGroupAdService.AdGroupAd
             'xsi_type': 'AdGroupAd',
             'adGroupId': adgroup_id,
-            'ad': expanded_text_ad(
-                headline_part_1,
-                headline_part_2,
-                description,
-                path_1,
-                path_2,
-                tracking_url_template,
-                url_customer_parameters,
-                final_urls,
-                final_mobile_urls,
-                final_app_urls,
-            ),
+            'ad': ad,
             'status': status,
         },
         'operator': operator,
@@ -428,12 +463,12 @@ def add_expanded_ad(adgroup_id: 'Long' = None,
     return operation
 
 
-def add_adgroup(campaign_id: 'Long' = None,
-                adgroup_id: 'Long' = None,
-                adgroup_name: 'String' = None,
-                status: 'String' = 'PAUSED',
-                operator: 'String' = 'ADD',
-                **kwargs):
+def adgroup_operation(campaign_id: 'Long' = None,
+                      adgroup_id: 'Long' = None,
+                      adgroup_name: 'String' = None,
+                      status: 'String' = 'PAUSED',
+                      operator: 'String' = 'ADD',
+                      **kwargs):
     operation = {
         'xsi_type': 'AdGroupOperation',
         'operand': {
@@ -441,19 +476,21 @@ def add_adgroup(campaign_id: 'Long' = None,
             'xsi_type': 'AdGroup',
             'campaignId': campaign_id,
             'id': adgroup_id,
-            'name': adgroup_name,
-            'status': status,
         },
         'operator': operator,
     }
+    if adgroup_name:
+        operation['operand']['name'] = adgroup_name
+    if status:
+        operation['operand']['status'] = status
     return operation
 
 
 def add_adgroup_cpc_bid_adjustment_operation(campaign_id,
                                              adgroup_id,
                                              value):
-    bid_operation = add_adgroup(campaign_id,
-                                adgroup_id,
+    bid_operation = adgroup_operation(campaign_id,
+                                      adgroup_id,
                                 'SET')
     bidding_strategy = build_new_bidding_strategy_configuration()
     bidding_strategy['bids'].append(build_new_bid_type('CpcBid', value))
