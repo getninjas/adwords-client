@@ -14,7 +14,7 @@ def get_conn():
     return get_connection('test_db.sqlite')
 
 
-def _test_client_operations():
+def test_client_operations():
     objects = [
         {
             'object_type': 'campaign',
