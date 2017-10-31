@@ -514,8 +514,9 @@ class AdWords:
                         'result_url': dirty_job['downloadUrl'].url if 'downloadUrl' in dirty_job else '',
                         'client_id': client_id,
                         'batchjob_id': dirty_job['id'],
-                        'progress': dict(dirty_job['progressStats']) if 'progressStats' in dirty_job else None,
                     }
+                    progress = dict(dirty_job['progressStats']) if 'progressStats' in dirty_job else {}
+                    formatted_dirty_job.update(progress)
                     updates.append({'id': row_id, 'operation': json.dumps(formatted_dirty_job)})
                     # remove job from pending dict if it is done or cancelled and add it to done dict
                     if dirty_job['status'] == 'DONE' or dirty_job['status'] == 'CANCELED':
