@@ -48,7 +48,7 @@ def adwords_worker(timestamp,
 
 
 def kwargs_worker(args, kwargs):
-    adwords_worker(*args, **kwargs)
+    return adwords_worker(*args, **kwargs)
 
 
 def init_lock(parent_lock):

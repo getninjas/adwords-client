@@ -499,30 +499,41 @@ class AdWords:
                 'status': batchjob_status}
         self.insert(table_name, data)
 
-    def set_batchjob_status(self, jobs_table, old_jobs, jobs):
+    def _update_jobs_status(self, jobs_table, jobs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        updates = []
+        while jobs['dirty']:
+            client_id, job_list = jobs['dirty'].popitem()
+            for dirty_job in job_list:
+                table_entry = jobs['pending'][client_id][dirty_job['id']]
+                row_id = table_entry['id']
+                pending_job = table_entry['data']
+                if dirty_job['status'] != pending_job['status']:
+                    formatted_dirty_job = {
+                        'status': dirty_job['status'],
+                        'result_url': dirty_job['downloadUrl'].url if 'downloadUrl' in dirty_job else '',
+                        'client_id': client_id,
+                        'batchjob_id': dirty_job['id']
+                    }
+                    updates.append({'id': row_id, 'operation': json.dumps(formatted_dirty_job)})
+                    # remove job from pending dict if it is done or cancelled and add it to done dict
+                    if dirty_job['status'] == 'DONE' or dirty_job['status'] == 'CANCELED':
+                        del jobs['pending'][client_id][dirty_job['id']]
+                        if not jobs['pending'][client_id]:
+                            del jobs['pending'][client_id]
+                        jobs['done'].setdefault(client_id, {})[dirty_job['id']] = formatted_dirty_job
+
+        # update internal table
         query = text("""
-        UPDATE {}
-        SET
-          operation = :operation
-        WHERE
-          id = :row_id
-        """.format(jobs_table))
+                UPDATE {}
+                SET
+                  operation = :operation
+                WHERE
+                  id = :id
+                """.format(jobs_table))
         with self.engine.begin() as conn:
-            for client_id in jobs:
-                updates = []
-                for job in jobs[client_id]:
-                    old_job = old_jobs[client_id][job['id']]
-                    if job['status'] != old_job['data']['status']:
-                        old_job['data'].update({
-                            'status': job['status'],
-                            'result_url': job['downloadUrl'].url if 'downloadUrl' in job else '',
-                            'client_id': client_id,
-                            'batchjob_id': job['id']
-                        })
-                        updates.append({'row_id': old_job['id'], 'operation': json.dumps(old_job['data'])})
-                if updates:
-                    conn.execute(query, *updates)
+            if updates:
+                conn.execute(query, *updates)
 
     def get_batchjobs(self, batch_table):
         batchjobs = {}
@@ -534,31 +545,35 @@ class AdWords:
                 batchjobs.setdefault(client_id, {})[data['batchjob_id']] = {'id': row_id, 'data': data}
         return batchjobs
 
-    def update_log_tables(self, bjs, batch_table, accounts):
+    def _update_jobs(self, bjs, batch_table, jobs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
-        if len(accounts) > 0:
-            result = bjs.get_multiple_status(accounts)
-            self.set_batchjob_status(batch_table, accounts, result)
-            accounts = self.get_batchjobs(batch_table)
-        return accounts
+        if len(jobs['pending']) > 0:
+            jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
+            self._update_jobs_status(batch_table, jobs)
+            # accounts = self.get_batchjobs(batch_table)
 
     def exponential_backoff(self, *args, **kwargs):
         logger.warning('DEPRECATED: use wait_jobs instead...')
         return self.wait_jobs(*args, **kwargs)
 
+    def _collect_jobs(self, jobs_table):
+        accounts = self.get_batchjobs(jobs_table)
+        return {'pending': accounts, 'dirty': {}, 'done': {}}
+
     def wait_jobs(self, jobs_table='batchlog_table', **kwargs):
         logger.info('Running {}...'.format(inspect.stack()[0][3]))
         self.create_batch_operation_log(jobs_table)
-        accounts = self.get_batchjobs(jobs_table)
+        jobs = self._collect_jobs(jobs_table)
         sleep_time = 15
         bjs = None
-        while len(accounts) > 0:
+        while len(jobs['pending']) > 0:
             if not bjs:
                 bjs = self.service('BatchJobService')
             logger.info('Waiting for batch jobs to finish...')
             time.sleep(sleep_time)
             sleep_time *= 2
-            accounts = self.update_log_tables(bjs, jobs_table, accounts)
+            self._update_jobs(bjs, jobs_table, jobs)
+        return jobs
 
     def get_min_value(self, table_name, *args):
         min_value = 0
@@ -612,6 +627,7 @@ class AdWords:
             raise
 
     def _make_entry(self, table_name, entry):
+        entry = {k: v for k, v in entry.items() if v is not None and v == v}
         self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
         return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
 
