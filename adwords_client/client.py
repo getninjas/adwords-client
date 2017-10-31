@@ -513,7 +513,8 @@ class AdWords:
                         'status': dirty_job['status'],
                         'result_url': dirty_job['downloadUrl'].url if 'downloadUrl' in dirty_job else '',
                         'client_id': client_id,
-                        'batchjob_id': dirty_job['id']
+                        'batchjob_id': dirty_job['id'],
+                        'progress': dict(dirty_job['progressStats']) if 'progressStats' in dirty_job else None,
                     }
                     updates.append({'id': row_id, 'operation': json.dumps(formatted_dirty_job)})
                     # remove job from pending dict if it is done or cancelled and add it to done dict
@@ -678,6 +679,7 @@ class AdWords:
         return bjs, operations
 
     def _execute_operations(self, bjs, operations, batchlog_table, operation_builder):
+        previous_client_id = None
         previous_client_id = None
         batch_size = 5000
         for client_id, internal_operation in operations:
