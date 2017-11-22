@@ -42,17 +42,11 @@ def noop(x):
 
 
 def cast_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return None
+    return float(x)
 
 
 def cast_int(x):
-    try:
-        return int(x)
-    except ValueError:
-        return None
+    return int(x)
 
 
 class AdwordsMapper:
@@ -61,15 +55,15 @@ class AdwordsMapper:
         self.adapter = adapter
 
     def to_adwords(self, value):
-        if value:
+        try:
             return self.adapter(value)
-        else:
+        except ValueError:
             return None
 
     def from_adwords(self, value):
-        if value:
+        try:
             return self.converter(value)
-        else:
+        except ValueError:
             return None
 
     @property
