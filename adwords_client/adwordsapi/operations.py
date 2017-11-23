@@ -491,7 +491,8 @@ def add_adgroup_cpc_bid_adjustment_operation(campaign_id,
                                              value):
     bid_operation = adgroup_operation(campaign_id,
                                       adgroup_id,
-                                      operator='SET')
+                                      operator='SET',
+                                      status=None)
     bidding_strategy = build_new_bidding_strategy_configuration()
     bidding_strategy['bids'].append(build_new_bid_type('CpcBid', value))
     bid_operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
