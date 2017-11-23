@@ -515,7 +515,11 @@ class AdWords:
                         'client_id': client_id,
                         'batchjob_id': dirty_job['id'],
                     }
-                    progress = dict(dirty_job['progressStats']) if 'progressStats' in dirty_job else {}
+                    progress = {}
+                    if 'progressStats' in dirty_job:
+                        # since this will be written to an internal table, we normalize the key
+                        # as this is the column name, and SQL is case insensitive
+                        progress = {k.lower(): v for k, v in dirty_job['progressStats']}
                     formatted_dirty_job.update(progress)
                     updates.append({'id': row_id, 'operation': json.dumps(formatted_dirty_job)})
                     # remove job from pending dict if it is done or cancelled and add it to done dict
@@ -552,7 +556,6 @@ class AdWords:
         if len(jobs['pending']) > 0:
             jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
             self._update_jobs_status(batch_table, jobs)
-            # accounts = self.get_batchjobs(batch_table)
 
     def exponential_backoff(self, *args, **kwargs):
         logger.warning('DEPRECATED: use wait_jobs instead...')
