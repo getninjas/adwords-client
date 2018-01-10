@@ -8,6 +8,7 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
 logging.getLogger('oauth2client').setLevel(logging.ERROR)
+logging.getLogger('suds').setLevel(logging.WARNING)
 
 
 def get_conn():
