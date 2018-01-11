@@ -40,13 +40,13 @@ def set_adgroup_name_operation(adgroup_id, name):
 
 def apply_new_budget(campaign_id, amount=None, budget_id=None, id_builder=None):
     if not budget_id:
-        logger.debug("Create a budget using 'amount' %s" % amount)
+        logger.debug("Create a budget using 'amount' %s", amount)
         if not id_builder:
             raise RuntimeError("'id_builder' callable should be provided for budgets to be created")
         budget_id = id_builder()
         yield add_budget(amount, budget_id)
 
-    logger.debug("Apply budget '%s' to campaign '%s'" % (budget_id, campaign_id))
+    logger.debug("Apply budget '%s' to campaign '%s'", budget_id, campaign_id)
     yield set_campaign_budget(budget_id, campaign_id)
 
 

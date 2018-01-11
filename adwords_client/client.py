@@ -70,7 +70,7 @@ class AdWords:
                    create_table=False, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
-        logger.info('Getting {}...'.format(report_type))
+        logger.info('Getting %s...', report_type)
         simple_download = kwargs.pop('simple_download', False)
         only_fields = kwargs.pop('fields', None)
         report_csv = common.get_report_csv(report_type)
@@ -481,11 +481,11 @@ class AdWords:
                                *args, **kwargs)
 
     def create_batch_operation_log(self, table_name, drop=False):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         self.create_operations_table(table_name, 'replace' if drop else 'append')
 
     def log_batchjob(self, table_name, batchjob_service, comment=''):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         client_id = batchjob_service.client.client_customer_id
         batchjob_id = batchjob_service.batch_job[0].id
         batchjob_upload_url = batchjob_service.batch_job[0].uploadUrl.url
@@ -500,7 +500,7 @@ class AdWords:
         self.insert(table_name, data)
 
     def _update_jobs_status(self, jobs_table, jobs):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         updates = []
         while jobs['dirty']:
             client_id, job_list = jobs['dirty'].popitem()
@@ -552,7 +552,7 @@ class AdWords:
         return batchjobs
 
     def _update_jobs(self, bjs, batch_table, jobs):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         if len(jobs['pending']) > 0:
             jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
             self._update_jobs_status(batch_table, jobs)
@@ -566,7 +566,7 @@ class AdWords:
         return {'pending': accounts, 'dirty': {}, 'done': {}}
 
     def wait_jobs(self, jobs_table='batchlog_table', **kwargs):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         self.create_batch_operation_log(jobs_table)
         jobs = self._collect_jobs(jobs_table)
         sleep_time = 15
@@ -608,7 +608,7 @@ class AdWords:
             yield operation.client_id, json.loads(operation.operation)
 
     def create_operations_table(self, table_name, if_exists='replace'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         if if_exists == 'replace':
             with self.engine.begin() as conn:
                 conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
@@ -626,9 +626,9 @@ class AdWords:
         try:
             return min(int(floor(u)) for u in _iter_floats(data.values()))
         except ValueError:
-            logger.debug('Problem getting min value for: {}'.format(str(data)))
+            logger.debug('Problem getting min value for: %s', str(data))
             for k, v in data.items():
-                logger.debug('Key: {} ({}) Value: {} ({})'.format(str(k), str(type(k)), str(v), str(type(v))))
+                logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
             raise
 
     def _make_entry(self, table_name, entry):
@@ -704,7 +704,7 @@ class AdWords:
             bjs.helper.upload_operations(is_last=True)
 
     def modify_bids(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
         def build_bid_change_operation(internal_operation):
@@ -739,7 +739,7 @@ class AdWords:
         :param batchlog_table:
         :return:
         """
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
         def get_next_id():
@@ -754,14 +754,14 @@ class AdWords:
 
         def valid_operation(internal_operation):
             is_remove = False
-            logger.debug('Internal Operation: {}'.format(str(internal_operation)))
+            logger.debug('Internal Operation: %s', str(internal_operation))
             if internal_operation.get('operator', '').upper() == 'REMOVE' \
                     or internal_operation.get('status', '').upper() == 'REMOVED':
                 is_remove = True
             if is_remove:
                 logger.debug('Remove operation')
                 campaign_id = internal_operation.get('campaign_id')
-                logger.debug('Campaign id: {}'.format(str(campaign_id)))
+                logger.debug('Campaign id: %s', str(campaign_id))
                 if internal_operation['object_type'] == 'campaign':
                     if not campaign_id:
                         raise RuntimeError('Campaign operation without campaign_id')
@@ -770,7 +770,7 @@ class AdWords:
                 if campaign_id in remove_operations['campaign']:
                     return False
                 adgroup_id = internal_operation.get('adgroup_id')
-                logger.debug('Adgroup id: {}'.format(str(adgroup_id)))
+                logger.debug('Adgroup id: %s', str(adgroup_id))
                 if internal_operation['object_type'] == 'adgroup':
                     if not adgroup_id:
                         raise RuntimeError('Adgroup operation without adgroup_id')
@@ -830,7 +830,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_new_keyword_operation)
 
     def modify_keywords_text(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(table_name, batchlog_table)
 
         def build_new_keyword_operation(internal_operation):
@@ -856,7 +856,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_new_keyword_operation)
 
     def modify_budgets(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
 
         def build_budget_operation(internal_operation):
@@ -869,7 +869,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_budget_operation)
 
     def add_adgroups_labels(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
 
         def build_adgroup_label_operation(internal_operation):
@@ -881,7 +881,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_label_operation)
 
     def modify_adgroups_names(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
 
         def build_adgroup_name_operation(internal_operation):
@@ -893,7 +893,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_name_operation)
 
     def modify_keywords_status(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
 
         def build_status_operation(internal_operation):
             if internal_operation['old_status'] != internal_operation['new_status']:
@@ -911,7 +911,7 @@ class AdWords:
         self._execute_operations(bjs, accounts, batchlog_table, build_status_operation)
 
     def create_labels(self, table_name):
-        logger.info('Running {}...'.format(inspect.stack()[0][3]))
+        logger.info('Running %s...', inspect.stack()[0][3])
         query = 'select * from {}'.format(table_name)
 
         n_entries = self.count_table(table_name)
