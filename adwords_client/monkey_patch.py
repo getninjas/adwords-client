@@ -135,38 +135,43 @@ appender.ContentAppender = _ContentAppender
 
 import suds
 from suds import client
+from suds.sax.text import Text
 
 
 class Factory(client.Factory):
-    def create(self, name, shallow=False, set_type=None):
-        if shallow:
-            """
-            create a WSDL type by name
-            @param name: The name of a type defined in the WSDL.
-            @type name: str
-            @return: The requested object.
-            @rtype: L{Object}
-            """
-            timer = metrics.Timer()
-            timer.start()
-            type = self.resolver.find(name)
-            if type is None:
-                raise suds.TypeNotFound(name)
-            if type.enum():
-                result = suds.sudsobject.Factory.object(name)
-                for e, a in type.children():
-                    setattr(result, e.name, e.name)
-            else:
-                try:
-                    result = self.builder.build(type, shallow, set_type)
-                except Exception as e:
-                    suds.log.error("create '%s' failed", name, exc_info=True)
-                    raise suds.BuildError(name, e)
-            timer.stop()
-            metrics.log.debug('%s created: %s', name, timer)
-            return result
+    def __init__(self, wsdl):
+        """
+        @param wsdl: A schema object.
+        @type wsdl: L{wsdl.Definitions}
+
+        """
+        self.wsdl = wsdl
+        self.resolver = client.PathResolver(wsdl)
+        self.builder = client.Builder(self.resolver)
+        self.object_cache = {}
+
+    def create(self, name, **kwargs):
+        """
+        create a WSDL type by name
+        @param name: The name of a type defined in the WSDL.
+        @type name: str
+        @return: The requested object.
+        @rtype: L{Object}
+        """
+        type = self.resolver.find(name)
+        if type is None:
+            raise suds.TypeNotFound(name)
+        if type.enum():
+            result = suds.sudsobject.Factory.object(name)
+            for e, a in type.children():
+                setattr(result, e.name, e.name)
         else:
-            return super().create(name)
+            try:
+                result = self.builder.build(type, **kwargs)
+            except Exception as e:
+                suds.log.error("create '%s' failed", name, exc_info=True)
+                raise suds.BuildError(name, e)
+        return result
 
 
 print('Applying Factory monkey patch...', file=sys.stderr)
