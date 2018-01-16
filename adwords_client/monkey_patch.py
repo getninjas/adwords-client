@@ -98,7 +98,7 @@ class _ContentAppender:
         @param marshaller: A marshaller.
         @type marshaller: L{suds.mx.core.Core}
         """
-        self.default = appender.PrimativeAppender(marshaller)
+        self.default = appender.PrimitiveAppender(marshaller)
         self.appenders = {
             None: appender.NoneAppender(marshaller),
             appender.null: appender.NoneAppender(marshaller),
@@ -108,7 +108,7 @@ class _ContentAppender:
             appender.Text: appender.TextAppender(marshaller),
             list: appender.ListAppender(marshaller),
             tuple: appender.ListAppender(marshaller),
-            dict: appender.DictAppender(marshaller),
+            # dict: appender.DictAppender(marshaller),  # remove after jurko 0.6
         }
 
     def append(self, parent, content):
@@ -251,3 +251,8 @@ def _PackForSuds(obj, factory, packer=None):
 
 print('Applying _PackForSuds monkey patch...', file=sys.stderr)
 common._PackForSuds = _PackForSuds
+
+
+from suds.transport.http import HttpTransport
+print('Applying _HttpTransport__get_request_url monkey patch...', file=sys.stderr)
+HttpTransport._HttpTransport__get_request_url = HttpTransport._HttpTransport__get_request_url_for_urllib
