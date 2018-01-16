@@ -1,3 +1,5 @@
+import sys
+
 from suds import metrics
 
 
@@ -15,6 +17,7 @@ class Timer:
         return 'Timer disabled'
 
 
+print('Applying Timer monkey patch...', file=sys.stderr)
 metrics.Timer = Timer
 
 
@@ -74,6 +77,7 @@ class Builder(builder.Builder):
             return super().process(data, type, history)
 
 
+print('Applying Builder monkey patch...', file=sys.stderr)
 builder.Builder = Builder
 
 
@@ -125,6 +129,7 @@ class _ContentAppender:
         appender.append(parent, content)
 
 
+print('Applying ContentAppender monkey patch...', file=sys.stderr)
 appender.ContentAppender = _ContentAppender
 
 
@@ -164,6 +169,7 @@ class Factory(client.Factory):
             return super().create(name)
 
 
+print('Applying Factory monkey patch...', file=sys.stderr)
 client.Factory = Factory
 
 
@@ -243,4 +249,5 @@ def _PackForSuds(obj, factory, packer=None):
         return obj
 
 
+print('Applying _PackForSuds monkey patch...', file=sys.stderr)
 common._PackForSuds = _PackForSuds
