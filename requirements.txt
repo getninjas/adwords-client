@@ -1,3 +1,4 @@
+https://bitbucket.org/jurko/suds/get/tip.tar.gz#egg=suds
 google-api-python-client~=1.6.4
 googleads==9.0.0
 oauth2client==4.0.0
@@ -7,7 +8,6 @@ pytz==2017.2
 PyYAML==3.12
 requests==2.13.0
 SQLAlchemy==1.1.9
-suds-jurko==0.6
 PyYAML==3.12
 
 psycopg2==2.7.1

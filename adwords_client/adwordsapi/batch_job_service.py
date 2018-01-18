@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
 
     def __init__(self, service):
-        request_builder = BatchJobHelper.GetRequestBuilder(client=service.client)
-        response_parser = BatchJobHelper.GetResponseParser()
+        request_builder = self.GetRequestBuilder(client=service.client)
+        response_parser = self.GetResponseParser()
         super().__init__(request_builder=request_builder, response_parser=response_parser)
         self.suds_client = service.suds_client
         self.operations = OrderedDict()     # Should honor the operation type insertion order
