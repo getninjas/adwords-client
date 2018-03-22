@@ -89,6 +89,7 @@ setup(
         'psycopg2>=2.7.1',
         'boto3>=1.4.4',
         'sqlalchemy-redshift>=0.5.0',
+        'httplib2<0.11.0',
     ],
     python_requires='~=3.5',
     setup_requires=['pytest-runner'],
