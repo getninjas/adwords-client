@@ -6,7 +6,7 @@ python:
 install: pip install tox-travis
 script: tox
 
-cache: pip
+cache: false
 
 matrix:
   fast_finish: true
