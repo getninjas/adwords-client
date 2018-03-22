@@ -31,14 +31,14 @@ def get_locations_csv():
 
 @lru_cache()
 def get_report_csv(report_type):
-    csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
-                            REPORTS_DEFINITIONS[report_type])
-    result = requests.get(csv_url)
-    if result.status_code == 200:
-        return requests.get(csv_url).content.decode('utf-8')
     csv_url = '{}{}/{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
                                API_VERSION,
                                REPORTS_DEFINITIONS[report_type])
+    result = requests.get(csv_url)
+    if result.status_code == 200:
+        return requests.get(csv_url).content.decode('utf-8')
+    csv_url = '{}{}'.format(REPORTS_DEFINITIONS['BASE_PATH'],
+                            REPORTS_DEFINITIONS[report_type])
     return requests.get(csv_url).content.decode('utf-8')
 
 
