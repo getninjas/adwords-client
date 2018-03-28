@@ -1,6 +1,5 @@
 import requests
 import logging
-from suds import TypeNotFound
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
