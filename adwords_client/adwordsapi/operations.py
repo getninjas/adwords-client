@@ -3,6 +3,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def batch_job_operation(operator, id_=None, status=None):
+    operation = {
+        'xsi_type': 'BatchJobOperation',
+        'operand': {
+            'xsi_type': 'BatchJob',
+        },
+        'operator': operator,
+    }
+    if id_:
+        operation['operand']['id'] = id_
+    if status:
+        operation['operand']['status'] = status
+    yield operation
+
+
 def add_label_operation(label):
     yield {
         'xsi_type': 'LabelOperation',
