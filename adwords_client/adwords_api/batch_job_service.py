@@ -4,7 +4,7 @@ from collections import OrderedDict
 import googleads
 
 from . import common as cm
-from .operations import batch_job_operation
+from adwords_client.adwords_api.operations.utils import batch_job_operation
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class BatchJobOperations:
         return self.operations[item]
 
     def add_batch_job_operation(self, *args, **kwargs):
-        self.operations.extend(batch_job_operation(*args, **kwargs))
+        self.operations.append(batch_job_operation(*args, **kwargs))
 
 
 class BatchJobService(cm.BaseService):

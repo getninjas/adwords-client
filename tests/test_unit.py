@@ -71,9 +71,7 @@ def test_client_operations():
            drop_batchlog_table=True, n_procs=1)
 
 
-def test_client():
-    client = AdWords.autoload()
-
+def _delete_campaigns(client):
     client.get_campaigns_report(7857288943, 'campaigns_report', 'CampaignStatus != "REMOVED"', create_table=True)
     new_report_df = client.load_table('campaigns_report')
     client.clear('delete_operations')
@@ -90,6 +88,8 @@ def test_client():
     client.sync_objects('delete_operations')
     client.wait_jobs()
 
+
+def _create_campaign(client):
     client.insert(
         'new_objects_table',
         {
@@ -144,6 +144,8 @@ def test_client():
     client.sync_objects('new_objects_table')
     client.wait_jobs()
 
+
+def _adjust_bids(client):
     client.get_keywords_report(7857288943, 'keywords_report', 'CampaignStatus = "PAUSED"', fields=True)
     report_df = client.load_table('keywords_report')
     print(report_df[['AccountDescriptiveName', 'AdGroupName', 'CampaignName', 'Criteria', 'KeywordMatchType', 'CpcBid']].to_string(index=False))
@@ -161,21 +163,21 @@ def test_client():
     client.modify_bids('new_keywords_bid_table')
     client.wait_jobs()
 
+
+def test_create_campaigns():
+    client = AdWords.autoload()
+    _create_campaign(client)
+
+
+def test_client():
+    client = AdWords.autoload()
+
+    _delete_campaigns(client)
+    _create_campaign(client)
+    _adjust_bids(client)
+
     client.get_keywords_report(7857288943, 'keywords_report', 'CampaignStatus = "PAUSED"', fields=True, create_table=True)
     new_report_df = client.load_table('keywords_report')
     print(new_report_df[['AccountDescriptiveName', 'AdGroupName', 'CampaignName', 'Criteria', 'KeywordMatchType', 'CpcBid']].to_string(index=False))
 
-    client.clear('delete_operations')
-    client.insert(
-        'delete_operations',
-        {
-            'object_type': 'campaign',
-            'client_id': 7857288943,
-            'campaign_id': int(new_report_df['CampaignId'][0]),
-            'campaign_name': 'API test campaign',
-            'operator': 'SET',
-            'status': 'REMOVED',
-        }
-    )
-    client.sync_objects('delete_operations')
-    client.wait_jobs()
+    _delete_campaigns(client)
