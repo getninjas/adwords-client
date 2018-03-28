@@ -487,9 +487,9 @@ class AdWords:
     def log_batchjob(self, table_name, batchjob_service, comment=''):
         logger.info('Running %s...', inspect.stack()[0][3])
         client_id = batchjob_service.client.client_customer_id
-        batchjob_id = batchjob_service.batch_job[0].id
-        batchjob_upload_url = batchjob_service.batch_job[0].uploadUrl.url
-        batchjob_status = batchjob_service.batch_job[0].status
+        batchjob_id = batchjob_service.batch_job.result['value'][0].id
+        batchjob_upload_url = batchjob_service.batch_job.result['value'][0].uploadUrl.url
+        batchjob_status = batchjob_service.batch_job.result['value'][0].status
         data = {'creation_time': datetime.datetime.now().isoformat(),
                 'client_id': client_id,
                 'batchjob_id': batchjob_id,
@@ -683,7 +683,6 @@ class AdWords:
         return bjs, operations
 
     def _execute_operations(self, bjs, operations, batchlog_table, operation_builder):
-        previous_client_id = None
         previous_client_id = None
         batch_size = 5000
         for client_id, internal_operation in operations:
