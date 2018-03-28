@@ -103,7 +103,7 @@ class BatchJobService(cm.BaseService):
         self.prepare_mutate()
         self.helper.add_batch_job_operation('ADD')
         self.batch_job = self.mutate(client_customer_id)
-        logger.debug('Created new batchjob:\n%s', self.batch_job)
+        logger.info('Created new batchjob:\n%s', self.batch_job)
         self.helper = BatchJobHelper(self)
 
     def cancel_jobs(self, jobs):
@@ -134,5 +134,5 @@ class BatchJobService(cm.BaseService):
             self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
             self.helper.add_predicate('Id', 'IN', [job for job in jobs[client_id]])
             result[client_id] = list(self.get(client_id))
-        logger.debug('BatchJob Statuses:\n%s', result)
+        logger.info('BatchJob Statuses:\n%s', result)
         return result
