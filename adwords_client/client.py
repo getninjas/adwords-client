@@ -22,7 +22,7 @@ import adwords_client.adwords_api.operations.keyword
 from . import adwords_api
 from . import config
 from . import sqlite as sqlutils
-from .internal_api.mappers import cast_to_adwords
+from .internal_api.mappers import cast_to_adwords, MAPPERS
 from .internal_api.builder import OperationsBuilder
 from .adwords_api import common
 from .adwords_api import operations_
@@ -99,8 +99,8 @@ class AdWords:
             kwargs['return_stream'] = True
             report_stream = rd.report(*args, **kwargs)
             converter = {
-                field: mappers.MAPPERS.get(report_csv[field]['Type']).from_adwords_func
-                for field in fields if report_csv[field]['Type'] in mappers.MAPPERS
+                field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
+                for field in fields if report_csv[field]['Type'] in MAPPERS
             }
             data = pd.read_csv(io.BytesIO(report_stream),
                                compression='gzip',
