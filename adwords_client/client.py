@@ -5,6 +5,7 @@ import io
 import json
 import logging
 import time
+
 from collections import Mapping
 from io import StringIO
 from math import floor, isfinite
@@ -19,9 +20,7 @@ import adwords_client.adwords_api.operations.ad
 import adwords_client.adwords_api.operations.adgroup
 import adwords_client.adwords_api.operations.campaign
 import adwords_client.adwords_api.operations.keyword
-from . import adwords_api
-from . import config
-from . import sqlite as sqlutils
+from . import adwords_api, config, sqlite, storages
 from .internal_api.mappers import cast_to_adwords, MAPPERS
 from .internal_api.builder import OperationsBuilder
 from .adwords_api import common
@@ -43,28 +42,36 @@ def _iter_floats(data):
 
 class AdWords:
     @classmethod
-    def autoload(cls, path=None):
+    def autoload(cls, path=None, **kwargs):
         config.configure(path)
-        return AdWords.from_args(**config.FIELDS)
+        return AdWords.from_credentials(config.FIELDS, **kwargs)
 
     @classmethod
-    def from_args(cls, **kwargs):
-        config = {'adwords': kwargs}
+    def from_credentials(cls, credentials, **kwargs):
+        config = {'adwords': credentials}
         config_yaml = yaml.safe_dump(config)
         client = googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
-        return cls(client)
+        return cls(client, **kwargs)
 
     @classmethod
     def from_file(cls, config_file):
         client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
         return cls(client)
 
-    def __init__(self, google_ads_client):
+    def __init__(self, google_ads_client, workdir=None, storage=None):
         self.client = google_ads_client
         self.services = {}
-        self.engine = sqlutils.get_connection()
+        self.engine = sqlite.get_connection()
         self.table_models = {}
-        self.table_min_id = {}
+        self.min_id = 0
+        if storage:
+            self.storage = storage
+        else:
+            self.storage = storages.FilesystemStorage(workdir) if workdir else storages.TemporaryFilesystemStorage()
+        self._open_files = {}
+
+    def file(self, name, *args, **kwargs):
+        return self._open_files.setdefault(name, self.storage.open(name, *args, **kwargs))
 
     def service(self, service_name):
         if service_name not in self.services:
@@ -489,7 +496,7 @@ class AdWords:
         logger.info('Running %s...', inspect.stack()[0][3])
         self.create_operations_table(table_name, 'replace' if drop else 'append')
 
-    def log_batchjob(self, table_name, batchjob_service, comment=''):
+    def log_batchjob(self, batchjob_service, file_name, comment=''):
         logger.info('Running %s...', inspect.stack()[0][3])
         client_id = batchjob_service.client.client_customer_id
         batchjob_id = batchjob_service.batch_job.result['value'][0].id
@@ -502,7 +509,7 @@ class AdWords:
                 'result_url': '',
                 'metadata': comment,
                 'status': batchjob_status}
-        self.insert(table_name, data)
+        self.insert(data, file_name=file_name)
 
     def _update_jobs_status(self, jobs_table, jobs):
         logger.info('Running %s...', inspect.stack()[0][3])
@@ -548,7 +555,7 @@ class AdWords:
 
     def get_batchjobs(self, batch_table):
         batchjobs = {}
-        for operation in sqlutils.itertable(self.engine, batch_table):
+        for operation in sqlite.itertable(self.engine, batch_table):
             row_id = operation.id
             client_id = operation.client_id
             data = json.loads(operation.operation)
@@ -609,7 +616,7 @@ class AdWords:
         df.to_sql(to_table, self.engine, index=False, if_exists='replace')
 
     def iter_operations_table(self, table_name):
-        for operation in sqlutils.itertable(self.engine, table_name):
+        for operation in sqlite.itertable(self.engine, table_name):
             yield operation.client_id, json.loads(operation.operation)
 
     def create_operations_table(self, table_name, if_exists='replace'):
@@ -623,8 +630,8 @@ class AdWords:
                 'operation text)'.format(table_name)
         with self.engine.begin() as conn:
             conn.execute(query)
-        sqlutils.create_index(self.engine, table_name, 'id', 'client_id')
-        self.table_models[table_name] = sqlutils.get_model_from_table(table_name, self.engine)
+        sqlite.create_index(self.engine, table_name, 'id', 'client_id')
+        self.table_models[table_name] = sqlite.get_model_from_table(table_name, self.engine)
 
     @staticmethod
     def _get_dict_min_value(data):
@@ -636,27 +643,24 @@ class AdWords:
                 logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
             raise
 
-    def _make_entry(self, table_name, entry):
-        entry = {k: v for k, v in entry.items() if v is not None and v == v}
-        self.table_min_id[table_name] = min(self.table_min_id.get(table_name, 0), self._get_dict_min_value(entry))
-        return {'client_id': entry['client_id'], 'operation': json.dumps(entry)}
+    def _make_entry(self, entry):
+        if 'client_id' not in entry:
+            raise ValueError('Every entry must have a "client_id" field.')
+        self.min_id = min(self.min_id, self._get_dict_min_value(entry))
+        return json.dumps(entry) + '\n'
 
-    def insert(self, table_name, data, if_exists='append'):
-        model = self.table_models.get(table_name)
-        if model is None or if_exists == 'replace':
-            self.create_operations_table(table_name, if_exists=if_exists)
-            model = self.table_models.get(table_name)
+    def insert(self, data, file_name='operations'):
         if isinstance(data, Mapping):
-            data = [self._make_entry(table_name, data)]
+            data = [self._make_entry(data)]
         else:
-            data = iter(self._make_entry(table_name, entry) for entry in data)
-        sqlutils.bulk_insert(self.engine, table_name, data, model)
+            data = iter(self._make_entry(entry) for entry in data)
+        self.file(file_name).writelines(data)
 
     def clear(self, table_name):
         with self.engine.begin() as conn:
             conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
         self.table_models.pop(table_name, None)
-        self.table_min_id.pop(table_name, None)
+        self.min_id = 0
 
     def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
         logger.info('Dumping dataframe data to table...')
@@ -666,7 +670,7 @@ class AdWords:
         self.create_operations_table(table_name, if_exists=if_exists)
         data = iter(self._make_entry(table_name, entry)
                     for entry in renamed_df.to_dict(orient='records'))
-        sqlutils.bulk_insert(self.engine, table_name, data)
+        sqlite.bulk_insert(self.engine, table_name, data)
 
     def count_table(self, table_name):
         with self.engine.begin() as conn:
@@ -678,25 +682,27 @@ class AdWords:
                 count = 0
         return count
 
-    def _setup_operations(self, table_name, batchlog_table):
-        n_entries = self.count_table(table_name)
-        self.create_batch_operation_log(batchlog_table)
-        if n_entries == 0:
-            return None, []
-        bjs = self.service('BatchJobService')
-        operations = self.iter_operations_table(table_name)
-        return bjs, operations
+    def _unpack_operations(self, file_name):
+        file = self.file(file_name)
+        file.flush()
+        file.seek(0)
+        for line in file:
+            yield json.loads(line)
 
-    def _execute_operations(self, bjs, operations, batchlog_table, operation_builder):
+    def _execute_operations(self, operation_builder, file_name):
+        bjs = self.service('BatchJobService')
         previous_client_id = None
         batch_size = 5000
-        for client_id, internal_operation in operations:
+        run_final_upload = False
+        for internal_operation in self._unpack_operations(file_name):
+            run_final_upload = True
+            client_id = internal_operation['client_id']
             if client_id != previous_client_id:
                 if previous_client_id is not None:
                     bjs.helper.upload_operations(is_last=True)
                 previous_client_id = client_id
                 bjs.prepare_job(int(client_id))
-                self.log_batchjob(batchlog_table, bjs)
+                self.log_batchjob(bjs, file_name + '.result')
                 in_batch = 0
             for operation in operation_builder(internal_operation):
                 if operation:
@@ -704,7 +710,7 @@ class AdWords:
                         bjs.helper.upload_operations()
                     bjs.helper.add_operation(operation)
                     in_batch += 1
-        if bjs is not None:
+        if run_final_upload:
             bjs.helper.upload_operations(is_last=True)
 
     def modify_bids(self, table_name, batchlog_table='batchlog_table'):
@@ -735,7 +741,7 @@ class AdWords:
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def sync_objects(self, table_name, batchlog_table='batchlog_table'):
+    def sync_objects(self):
         """
         Possible columns in the table:
 
@@ -744,9 +750,8 @@ class AdWords:
         :return:
         """
         logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(table_name, batchlog_table)
-        builder = OperationsBuilder(self.table_min_id[table_name])
-        self._execute_operations(bjs, accounts, batchlog_table, builder)
+        builder = OperationsBuilder(self.min_id)
+        self._execute_operations(builder, 'operations')
 
     def modify_keywords_text(self, table_name, batchlog_table='batchlog_table'):
         logger.info('Running %s...', inspect.stack()[0][3])

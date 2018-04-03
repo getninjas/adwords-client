@@ -91,7 +91,6 @@ def _delete_campaigns(client):
 
 def _create_campaign(client):
     client.insert(
-        'new_objects_table',
         {
             'object_type': 'campaign',
             'client_id': 7857288943,
@@ -103,7 +102,6 @@ def _create_campaign(client):
         }
     )
     client.insert(
-        'new_objects_table',
         {
             'object_type': 'adgroup',
             'client_id': 7857288943,
@@ -113,7 +111,6 @@ def _create_campaign(client):
         }
     )
     client.insert(
-        'new_objects_table',
         {
             'object_type': 'keyword',
             'client_id': 7857288943,
@@ -126,7 +123,6 @@ def _create_campaign(client):
         }
     )
     client.insert(
-        'new_objects_table',
         {
             'object_type': 'ad',
             'client_id': 7857288943,
@@ -141,7 +137,7 @@ def _create_campaign(client):
             'final_mobile_urls': 'http://m.mytest.com/',
         }
     )
-    client.sync_objects('new_objects_table')
+    client.sync_objects()
     client.wait_jobs()
 
 
@@ -165,7 +161,7 @@ def _adjust_bids(client):
 
 
 def test_create_campaigns():
-    client = AdWords.autoload()
+    client = AdWords.autoload(workdir='./tests')
     _create_campaign(client)
 
 
