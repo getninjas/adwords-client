@@ -87,10 +87,15 @@ class BaseService:
     def __init__(self, client, service_name):
         self.client = client
         self.service_name = service_name
-        self.service = client.GetService(service_name, version=API_VERSION)
-        self.suds_client = self.service.suds_client
+        self._service = None
         self.helper = None
         self.ResultProcessor = None
+
+    @property
+    def service(self):
+        if not self._service:
+            self._service = self.client.GetService(self.service_name, version=API_VERSION)
+        return self._service
 
     # Default selector for get, should be overwritten if necessary.
     def prepare_get(self):
@@ -110,7 +115,6 @@ class BaseService:
 
 class Selector:
     def __init__(self, service):
-        self.suds_client = service.suds_client
         self.selector = None
         self.selector = {
             'xsi_type': 'Selector',

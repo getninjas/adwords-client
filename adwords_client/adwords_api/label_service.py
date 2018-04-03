@@ -4,7 +4,6 @@ from . import common as cm
 class LabelServiceOperations:
     def __init__(self, label_service):
         self.label_service = label_service
-        self.suds_client = label_service.service.suds_client
         self.operations = []
 
     def add_operation(self, operation):

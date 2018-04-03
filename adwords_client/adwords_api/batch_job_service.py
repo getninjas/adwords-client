@@ -15,7 +15,6 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper):
         request_builder = self.GetRequestBuilder(client=service.client)
         response_parser = self.GetResponseParser()
         super().__init__(request_builder=request_builder, response_parser=response_parser)
-        self.suds_client = service.suds_client
         self.operations = OrderedDict()     # Should honor the operation type insertion order
         self.last_operation = None
         self.upload_helper = self.GetIncrementalUploadHelper(service.batch_job.result['value'][0].uploadUrl.url)
@@ -67,7 +66,6 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper):
 
 class BatchJobOperations:
     def __init__(self, service):
-        self.suds_client = service.suds_client
         self.operations = []
 
     def __getitem__(self, item):
