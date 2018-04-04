@@ -5,26 +5,23 @@ import io
 import json
 import logging
 import time
-
+import uuid
 from collections import Mapping
 from io import StringIO
 from math import floor, isfinite
+from tempfile import NamedTemporaryFile
+from os import path
+from multiprocessing import Pool
 
 import googleads.adwords
 import pandas as pd
 import yaml
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.sql import text
 
-import adwords_client.adwords_api.operations.ad
-import adwords_client.adwords_api.operations.adgroup
-import adwords_client.adwords_api.operations.campaign
-import adwords_client.adwords_api.operations.keyword
 from . import adwords_api, config, sqlite, storages
-from .internal_api.mappers import cast_to_adwords, MAPPERS
+from .internal_api.mappers import MAPPERS
 from .internal_api.builder import OperationsBuilder
-from .adwords_api import common
-from .adwords_api import operations_
+from .adwords_api import common, operations_
 from .adwords_api.managed_customer_service import ManagedCustomerService
 from .adwords_api.sync_job_service import SyncJobService
 
@@ -40,17 +37,20 @@ def _iter_floats(data):
             pass
 
 
+def multiprocessing_starmap(*args, **kwargs):
+    return Pool().starmap(*args, **kwargs)
+
+
+def adwords_client_factory(credentials):
+    config = {'adwords': credentials}
+    config_yaml = yaml.safe_dump(config)
+    return googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
+
+
 class AdWords:
     @classmethod
-    def autoload(cls, path=None, **kwargs):
-        config.configure(path)
-        return AdWords.from_credentials(config.FIELDS, **kwargs)
-
-    @classmethod
     def from_credentials(cls, credentials, **kwargs):
-        config = {'adwords': credentials}
-        config_yaml = yaml.safe_dump(config)
-        client = googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
+        client = adwords_client_factory(credentials)
         return cls(client, **kwargs)
 
     @classmethod
@@ -58,25 +58,99 @@ class AdWords:
         client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
         return cls(client)
 
-    def __init__(self, google_ads_client, workdir=None, storage=None):
-        self.client = google_ads_client
+    def __init__(self, google_ads_client=None, workdir=None, storage=None, map_function=None):
+        self._client = google_ads_client
         self.services = {}
-        self.engine = sqlite.get_connection()
+        self._engine = None
         self.table_models = {}
         self.min_id = 0
+        self.map_function = map_function or multiprocessing_starmap
         if storage:
             self.storage = storage
         else:
             self.storage = storages.FilesystemStorage(workdir) if workdir else storages.TemporaryFilesystemStorage()
         self._open_files = {}
+        self._operations_buffer = None
 
-    def file(self, name, *args, **kwargs):
-        return self._open_files.setdefault(name, self.storage.open(name, *args, **kwargs))
+    @property
+    def client(self):
+        if not self._client:
+            config.configure(path)
+            self._client = adwords_client_factory(config.FIELDS)
+        return self._client
+
+    @property
+    def engine(self):
+        if not self._engine:
+            self._engine = sqlite.get_connection()
+        return self._engine
+
+    @property
+    def operations(self):
+        if not self._operations_buffer:
+            self._operations_buffer = NamedTemporaryFile('w+')
+        return self._operations_buffer
 
     def service(self, service_name):
         if service_name not in self.services:
             self.services[service_name] = getattr(adwords_api, service_name)
         return self.services[service_name](self.client)
+
+    def file(self, name, *args, **kwargs):
+        return self._open_files.setdefault(name, self.storage.open(name, *args, **kwargs))
+
+    def flush_files(self):
+        for file in self._open_files.values():
+            file.flush()
+
+    def _write_entry(self, file_name, entry):
+        self.file(file_name).write(json.dumps(entry) + '\n')
+
+    def _read_entries(self, file_name):
+        file = self.file(file_name, mode='r')
+        file.flush()
+        file.seek(0)
+        for line in file:
+            yield json.loads(line)
+
+    def _read_from_folder(self, folder_name, name_filter=None):
+        _, files = self.storage.listdir(folder_name)
+        for file in files:
+            if not name_filter or name_filter(file):
+                yield from self._read_entries(path.join(folder_name, file))
+
+    def _write_buffer(self, entry):
+        self.operations.write(json.dumps(entry) + '\n')
+
+    def _read_buffer(self):
+        self.operations.flush()
+        self.operations.seek(0)
+        for line in self.operations:
+            yield json.loads(line)
+
+    @staticmethod
+    def _get_dict_min_value(data):
+        try:
+            return min(int(floor(u)) for u in _iter_floats(data.values()))
+        except ValueError:
+            logger.debug('Problem getting min value for: %s', str(data))
+            for k, v in data.items():
+                logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
+            raise
+
+    def _get_min_id(self, entry):
+        if 'client_id' not in entry:
+            raise ValueError('Every entry must have a "client_id" field.')
+        self.min_id = min(self.min_id, self._get_dict_min_value(entry))
+        return entry
+
+    def insert(self, data):
+        if isinstance(data, Mapping):
+            data = [self._get_min_id(data)]
+        else:
+            data = iter(self._get_min_id(entry) for entry in data)
+        for entry in data:
+            self._write_buffer(entry)
 
     def get_report(self, report_type, customer_id, target_name,
                    create_table=False, exclude_fields=[],
@@ -509,7 +583,7 @@ class AdWords:
                 'result_url': '',
                 'metadata': comment,
                 'status': batchjob_status}
-        self.insert(data, file_name=file_name)
+        self._write_entry(file_name, data)
 
     def _update_jobs_status(self, jobs):
         logger.info('Running %s...', inspect.stack()[0][3])
@@ -543,22 +617,17 @@ class AdWords:
             jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
             self._update_jobs_status(jobs)
 
-    def _collect_jobs(self):
-        def _yield_jobs_from_files():
-            _, files = self.storage.listdir('')
-            for file in files:
-                if file.endswith('.result'):
-                    yield from self._read_entries(file)
+    def _collect_jobs(self, operations_folder):
         batchjobs = {}
-        for operation in _yield_jobs_from_files():
+        for operation in self._read_from_folder(operations_folder, name_filter=lambda x: x.endswith('.result')):
             client_id = operation['client_id']
             if operation['status'] != 'DONE' and operation['status'] != 'CANCELED':
                 batchjobs.setdefault(client_id, {})[operation['batchjob_id']] = operation
         return {'pending': batchjobs, 'dirty': {}, 'done': {}}
 
-    def wait_jobs(self, jobs_file='jobs.result'):
+    def wait_jobs(self, operations_folder=''):
         logger.info('Running %s...', inspect.stack()[0][3])
-        jobs = self._collect_jobs()
+        jobs = self._collect_jobs(operations_folder)
         sleep_time = 15
         bjs = None
         while len(jobs['pending']) > 0:
@@ -568,7 +637,8 @@ class AdWords:
             time.sleep(sleep_time)
             sleep_time *= 2
             self._update_jobs(bjs, jobs)
-        self._write_entry(jobs_file, jobs)
+        self._write_entry(path.join(operations_folder, 'jobs.result'), jobs)
+        self.flush_files()
         return jobs
 
     def get_min_value(self, table_name, *args):
@@ -612,38 +682,20 @@ class AdWords:
         sqlite.create_index(self.engine, table_name, 'id', 'client_id')
         self.table_models[table_name] = sqlite.get_model_from_table(table_name, self.engine)
 
-    @staticmethod
-    def _get_dict_min_value(data):
-        try:
-            return min(int(floor(u)) for u in _iter_floats(data.values()))
-        except ValueError:
-            logger.debug('Problem getting min value for: %s', str(data))
-            for k, v in data.items():
-                logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
-            raise
-
-    def _write_entry(self, file_name, entry):
-        self.file(file_name).write(json.dumps(entry) + '\n')
-
-    def _get_min_id(self, entry):
-        if 'client_id' not in entry:
-            raise ValueError('Every entry must have a "client_id" field.')
-        self.min_id = min(self.min_id, self._get_dict_min_value(entry))
-        return entry
-
-    def insert(self, data, file_name='operations'):
-        if isinstance(data, Mapping):
-            data = [self._get_min_id(data)]
-        else:
-            data = iter(self._get_min_id(entry) for entry in data)
-        for entry in data:
-            self._write_entry(file_name, entry)
-
     def clear(self, table_name):
         with self.engine.begin() as conn:
             conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
         self.table_models.pop(table_name, None)
         self.min_id = 0
+
+    def split(self):
+        operations_folder = str(uuid.uuid1())
+        for entry in self._read_buffer():
+            self._write_entry(path.join(operations_folder, '{}.data'.format(entry['campaign_id'])), entry)
+        for file in self._open_files.values():
+            file.close()
+        self._open_files = {}
+        return operations_folder
 
     def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
         logger.info('Dumping dataframe data to table...')
@@ -665,15 +717,9 @@ class AdWords:
                 count = 0
         return count
 
-    def _read_entries(self, file_name):
-        file = self.file(file_name)
-        file.flush()
-        file.seek(0)
-        for line in file:
-            yield json.loads(line)
-
-    def _execute_operations(self, operation_builder, file_name):
+    def _execute_operations(self, file_name):
         bjs = self.service('BatchJobService')
+        operation_builder = OperationsBuilder(self.min_id)
         previous_client_id = None
         batch_size = 5000
         run_final_upload = False
@@ -695,36 +741,12 @@ class AdWords:
                     in_batch += 1
         if run_final_upload:
             bjs.helper.upload_operations(is_last=True)
+        self.flush_files()
 
-    def modify_bids(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(table_name, batchlog_table)
-
-        def build_bid_change_operation(internal_operation):
-            old_bid = cast_to_adwords('cpc_bid', internal_operation['old_bid'])
-            new_bid = cast_to_adwords('cpc_bid', internal_operation['new_bid'])
-            if new_bid != old_bid:
-                # TODO: check if this operation is associated with an adgroup and not a keyword, should not exist
-                if internal_operation['keyword_id'] > -1:
-                    yield operations_.add_keyword_cpc_bid_adjustment_operation(
-                        cast_to_adwords('adgroup_id', internal_operation['adgroup_id']),
-                        cast_to_adwords('keyword_id', internal_operation['keyword_id']),
-                        new_bid,
-                    )
-                else:
-                    yield operations_.add_adgroup_cpc_bid_adjustment_operation(
-                        cast_to_adwords('campaign_id', internal_operation['campaign_id']),
-                        cast_to_adwords('adgroup_id', internal_operation['adgroup_id']),
-                        new_bid,
-                    )
-            else:
-                yield None
-
-        self._execute_operations(bjs, accounts, batchlog_table, build_bid_change_operation)
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def sync_objects(self):
+    def execute_operations(self, operations_folder):
         """
         Possible columns in the table:
 
@@ -733,89 +755,12 @@ class AdWords:
         :return:
         """
         logger.info('Running %s...', inspect.stack()[0][3])
-        builder = OperationsBuilder(self.min_id)
-        self._execute_operations(builder, 'operations')
-
-    def modify_keywords_text(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(table_name, batchlog_table)
-
-        def build_new_keyword_operation(internal_operation):
-            # check if this operation is associated with an adgroup and not a keyword
-            if internal_operation['keyword_id'] > -1:
-                yield operations_.new_biddable_adgroup_criterion_operation(
-                    int(internal_operation['adgroup_id']),
-                    'SET',
-                    'Keyword',
-                    int(internal_operation['keyword_id']),
-                    userStatus='PAUSED'
-                )
-                yield adwords_client.adwords_api.operations.keyword.new_keyword_operation(
-                    int(internal_operation['adgroup_id']),
-                    internal_operation['new_text'],
-                    internal_operation['keyword_match_type'].upper(),
-                    internal_operation['status'].upper(),
-                    int(internal_operation['cpc_bid'])
-                )
-            else:
-                yield None
-
-        self._execute_operations(bjs, accounts, batchlog_table, build_new_keyword_operation)
-
-    def modify_budgets(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
-
-        def build_budget_operation(internal_operation):
-            yield from operations_.apply_new_budget(
-                campaign_id='%.0f' % internal_operation['campaign_id'],  # 3.14 -> '3'
-                amount=internal_operation['amount'],
-                id_builder=bjs.get_temporary_id
-            )
-
-        self._execute_operations(bjs, accounts, batchlog_table, build_budget_operation)
-
-    def add_adgroups_labels(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
-
-        def build_adgroup_label_operation(internal_operation):
-            yield from operations_.add_adgroup_label_operation(
-                adgroup_id='%.0f' % internal_operation['adgroup_id'],
-                label_id='%.0f' % internal_operation['label_id']
-            )
-
-        self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_label_operation)
-
-    def modify_adgroups_names(self, operations_table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        bjs, accounts = self._setup_operations(operations_table_name, batchlog_table)
-
-        def build_adgroup_name_operation(internal_operation):
-            yield from operations_.set_adgroup_name_operation(
-                adgroup_id='%.0f' % internal_operation['adgroup_id'],
-                name=internal_operation['name']
-            )
-
-        self._execute_operations(bjs, accounts, batchlog_table, build_adgroup_name_operation)
-
-    def modify_keywords_status(self, table_name, batchlog_table='batchlog_table'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-
-        def build_status_operation(internal_operation):
-            if internal_operation['old_status'] != internal_operation['new_status']:
-                yield operations_.new_biddable_adgroup_criterion_operation(
-                    int(internal_operation['adgroup_id']),
-                    'SET',
-                    'Keyword',
-                    int(internal_operation['keyword_id']),
-                    userStatus=internal_operation['new_status']
-                )
-            else:
-                yield None
-
-        bjs, accounts = self._setup_operations(table_name, batchlog_table)
-        self._execute_operations(bjs, accounts, batchlog_table, build_status_operation)
+        _, files = self.storage.listdir(operations_folder)
+        files = [[path.join(operations_folder, file)] for file in files]
+        self._client = None
+        self._engine = None
+        self._operations_buffer = None
+        self.map_function(self._execute_operations, files)
 
     def create_labels(self, table_name):
         logger.info('Running %s...', inspect.stack()[0][3])
