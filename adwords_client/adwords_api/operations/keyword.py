@@ -9,10 +9,9 @@ def new_keyword_operation(adgroup_id: 'Long' = None,
                           cpc_bid: 'Bid' = None,
                           operator: 'String' = 'ADD',
                           **kwargs):
-    status = status.upper()
+    operator = operator.upper()
     if not status and operator == 'ADD':
         status = 'PAUSED'
-    operator = operator.upper()
 
     operation = {
         'xsi_type': 'AdGroupCriterionOperation',
@@ -28,7 +27,7 @@ def new_keyword_operation(adgroup_id: 'Long' = None,
         operation['operand']['criterion']['id'] = criteria_id
 
     if status:
-        operation['operand']['userStatus'] = status
+        operation['operand']['userStatus'] = status.upper()
 
     if status != 'REMOVED' and keyword_match_type and text:
         operation['operand']['criterion']['text'] = text
