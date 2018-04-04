@@ -70,9 +70,6 @@ def get_connection(file_name=None, sqlalquemy_engine=True, connection_factory=No
     elif not connection_factory:
         file_obj = tempfile.NamedTemporaryFile()
         db_source = file_obj.name
-        # with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        #     db_source = temp_file.name
-        #     TEMPORARY_FILES.append(db_source)
 
     connect_string = 'sqlite:///{}'.format(db_source) if db_source != ':memory:' else 'sqlite://'
 
