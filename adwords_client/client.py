@@ -511,15 +511,12 @@ class AdWords:
                 'status': batchjob_status}
         self.insert(data, file_name=file_name)
 
-    def _update_jobs_status(self, jobs_table, jobs):
+    def _update_jobs_status(self, jobs):
         logger.info('Running %s...', inspect.stack()[0][3])
-        updates = []
         while jobs['dirty']:
             client_id, job_list = jobs['dirty'].popitem()
             for dirty_job in job_list:
-                table_entry = jobs['pending'][client_id][dirty_job['id']]
-                row_id = table_entry['id']
-                pending_job = table_entry['data']
+                pending_job = jobs['pending'][client_id][dirty_job['id']]
                 if dirty_job['status'] != pending_job['status']:
                     formatted_dirty_job = {
                         'status': dirty_job['status'],
@@ -533,7 +530,6 @@ class AdWords:
                         # as this is the column name, and SQL is case insensitive
                         progress = {k.lower(): v for k, v in dirty_job['progressStats']}
                     formatted_dirty_job.update(progress)
-                    updates.append({'id': row_id, 'operation': json.dumps(formatted_dirty_job)})
                     # remove job from pending dict if it is done or cancelled and add it to done dict
                     if dirty_job['status'] == 'DONE' or dirty_job['status'] == 'CANCELED':
                         del jobs['pending'][client_id][dirty_job['id']]
@@ -541,46 +537,28 @@ class AdWords:
                             del jobs['pending'][client_id]
                         jobs['done'].setdefault(client_id, {})[dirty_job['id']] = formatted_dirty_job
 
-        # update internal table
-        query = text("""
-                UPDATE {}
-                SET
-                  operation = :operation
-                WHERE
-                  id = :id
-                """.format(jobs_table))
-        with self.engine.begin() as conn:
-            if updates:
-                conn.execute(query, *updates)
-
-    def get_batchjobs(self, batch_table):
-        batchjobs = {}
-        for operation in sqlite.itertable(self.engine, batch_table):
-            row_id = operation.id
-            client_id = operation.client_id
-            data = json.loads(operation.operation)
-            if data['status'] != 'DONE' and data['status'] != 'CANCELED':
-                batchjobs.setdefault(client_id, {})[data['batchjob_id']] = {'id': row_id, 'data': data}
-        return batchjobs
-
-    def _update_jobs(self, bjs, batch_table, jobs):
+    def _update_jobs(self, bjs, jobs):
         logger.info('Running %s...', inspect.stack()[0][3])
         if len(jobs['pending']) > 0:
             jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
-            self._update_jobs_status(batch_table, jobs)
+            self._update_jobs_status(jobs)
 
-    def exponential_backoff(self, *args, **kwargs):
-        logger.warning('DEPRECATED: use wait_jobs instead...')
-        return self.wait_jobs(*args, **kwargs)
+    def _collect_jobs(self):
+        def _yield_jobs_from_files():
+            _, files = self.storage.listdir('')
+            for file in files:
+                if file.endswith('.result'):
+                    yield from self._read_entries(file)
+        batchjobs = {}
+        for operation in _yield_jobs_from_files():
+            client_id = operation['client_id']
+            if operation['status'] != 'DONE' and operation['status'] != 'CANCELED':
+                batchjobs.setdefault(client_id, {})[operation['batchjob_id']] = operation
+        return {'pending': batchjobs, 'dirty': {}, 'done': {}}
 
-    def _collect_jobs(self, jobs_table):
-        accounts = self.get_batchjobs(jobs_table)
-        return {'pending': accounts, 'dirty': {}, 'done': {}}
-
-    def wait_jobs(self, jobs_table='batchlog_table', **kwargs):
+    def wait_jobs(self, jobs_file='jobs.result'):
         logger.info('Running %s...', inspect.stack()[0][3])
-        self.create_batch_operation_log(jobs_table)
-        jobs = self._collect_jobs(jobs_table)
+        jobs = self._collect_jobs()
         sleep_time = 15
         bjs = None
         while len(jobs['pending']) > 0:
@@ -589,7 +567,8 @@ class AdWords:
             logger.info('Waiting for batch jobs to finish...')
             time.sleep(sleep_time)
             sleep_time *= 2
-            self._update_jobs(bjs, jobs_table, jobs)
+            self._update_jobs(bjs, jobs)
+        self._write_entry(jobs_file, jobs)
         return jobs
 
     def get_min_value(self, table_name, *args):
@@ -643,18 +622,22 @@ class AdWords:
                 logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
             raise
 
-    def _make_entry(self, entry):
+    def _write_entry(self, file_name, entry):
+        self.file(file_name).write(json.dumps(entry) + '\n')
+
+    def _get_min_id(self, entry):
         if 'client_id' not in entry:
             raise ValueError('Every entry must have a "client_id" field.')
         self.min_id = min(self.min_id, self._get_dict_min_value(entry))
-        return json.dumps(entry) + '\n'
+        return entry
 
     def insert(self, data, file_name='operations'):
         if isinstance(data, Mapping):
-            data = [self._make_entry(data)]
+            data = [self._get_min_id(data)]
         else:
-            data = iter(self._make_entry(entry) for entry in data)
-        self.file(file_name).writelines(data)
+            data = iter(self._get_min_id(entry) for entry in data)
+        for entry in data:
+            self._write_entry(file_name, entry)
 
     def clear(self, table_name):
         with self.engine.begin() as conn:
@@ -668,7 +651,7 @@ class AdWords:
         if table_mappings:
             renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
         self.create_operations_table(table_name, if_exists=if_exists)
-        data = iter(self._make_entry(table_name, entry)
+        data = iter(self._get_min_id(table_name, entry)
                     for entry in renamed_df.to_dict(orient='records'))
         sqlite.bulk_insert(self.engine, table_name, data)
 
@@ -682,7 +665,7 @@ class AdWords:
                 count = 0
         return count
 
-    def _unpack_operations(self, file_name):
+    def _read_entries(self, file_name):
         file = self.file(file_name)
         file.flush()
         file.seek(0)
@@ -694,7 +677,7 @@ class AdWords:
         previous_client_id = None
         batch_size = 5000
         run_final_upload = False
-        for internal_operation in self._unpack_operations(file_name):
+        for internal_operation in self._read_entries(file_name):
             run_final_upload = True
             client_id = internal_operation['client_id']
             if client_id != previous_client_id:
