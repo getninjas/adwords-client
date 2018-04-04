@@ -40,9 +40,12 @@ class FilesystemStorage:
         self.workdir = workdir
 
     def open(self, name, mode='w+', *args, **kwargs):
-        return open(os.path.join(self.workdir, name), mode=mode, *args, **kwargs)
+        full_name = os.path.join(self.workdir, name)
+        os.makedirs(os.path.dirname(full_name), exist_ok=True)
+        return open(full_name, mode=mode, *args, **kwargs)
 
     def listdir(self, path):
+        dirnames, filenames = [], []
         for _, dirnames, filenames in os.walk(os.path.join(self.workdir, path)):
             break
         return dirnames, filenames
