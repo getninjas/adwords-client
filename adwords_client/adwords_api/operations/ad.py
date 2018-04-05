@@ -69,24 +69,19 @@ def _expanded_text_ad(headline_part_1='',
         # Specify a list of final URLs. This field cannot be set if URL
         # field is set, or finalUrls is unset. This may be specified at ad,
         # criterion, and feed item levels.
-        ad['finalUrls'] = [final_urls],
+        ad['finalUrls'] = [final_urls]
     # we assume at this point that only one final url will be set
     if final_mobile_urls:
         # Specify a list of final URLs. This field cannot be set if URL
         # field is set, or finalUrls is unset. This may be specified at ad,
         # criterion, and feed item levels.
-        ad['finalMobileUrls'] = [final_mobile_urls],
+        ad['finalMobileUrls'] = [final_mobile_urls]
         # we assume at this point that only one final url will be set
     if final_app_urls:
         # Specify a list of final URLs. This field cannot be set if URL
         # field is set, or finalUrls is unset. This may be specified at ad,
         # criterion, and feed item levels.
-        ad['finalAppUrls'] = [final_app_urls],
-    if final_urls:
-        # Specify a list of final URLs. This field cannot be set if URL
-        # field is set, or finalUrls is unset. This may be specified at ad,
-        # criterion, and feed item levels.
-        ad['finalUrls'] = [final_urls],
+        ad['finalAppUrls'] = [final_app_urls]
     if tracking_url_template:
         # Specify a tracking URL for 3rd party tracking provider. You may specify
         # one at customer, campaign, ad group, ad, criterion or feed item levels.
