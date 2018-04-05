@@ -58,18 +58,8 @@ def adwords_client_factory(credentials):
 
 
 class AdWords:
-    @classmethod
-    def from_credentials(cls, credentials, **kwargs):
-        client = adwords_client_factory(credentials)
-        return cls(client, **kwargs)
-
-    @classmethod
-    def from_file(cls, config_file):
-        client = googleads.adwords.AdWordsClient.LoadFromStorage(config_file)
-        return cls(client)
-
-    def __init__(self, google_ads_client=None, workdir=None, storage=None, map_function=None):
-        self._client = google_ads_client
+    def __init__(self, workdir=None, storage=None, map_function=None):
+        self._client = None
         self.services = {}
         self._engine = None
         self.table_models = {}
