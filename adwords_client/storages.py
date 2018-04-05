@@ -13,6 +13,8 @@ class TemporaryFilesystemStorage:
         self._files = {}
 
     def open(self, name, mode='w+', *args, **kwargs):
+        if name.startswith('/'):
+            raise ValueError('File name should not start with "/": {}'.format(name))
         if name not in self._files:
             self._files[name] = tempfile.NamedTemporaryFile()
             logger.debug('Created temporary storage file %s', self._files[name].name)
@@ -44,6 +46,8 @@ class FilesystemStorage:
         self.workdir = workdir
 
     def open(self, name, mode='w+', *args, **kwargs):
+        if name.startswith('/'):
+            raise ValueError('File name should not start with "/": {}'.format(name))
         full_name = os.path.join(self.workdir, name)
         os.makedirs(os.path.dirname(full_name), exist_ok=True)
         return open(full_name, mode=mode, *args, **kwargs)
