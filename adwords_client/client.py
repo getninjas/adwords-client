@@ -595,7 +595,7 @@ class AdWords:
                 if dirty_job['status'] != pending_job['status']:
                     formatted_dirty_job = {
                         'status': dirty_job['status'],
-                        'result_url': dirty_job['downloadUrl'].url if 'downloadUrl' in dirty_job else '',
+                        'result_url': dirty_job['downloadUrl']['url'] if dirty_job['downloadUrl'] else '',
                         'client_id': client_id,
                         'batchjob_id': dirty_job['id'],
                     }
@@ -638,10 +638,12 @@ class AdWords:
         while len(jobs['pending']) > 0:
             if not bjs:
                 bjs = self.service('BatchJobService')
-            logger.info('Waiting for batch jobs to finish...')
-            time.sleep(sleep_time)
-            sleep_time *= 2
             self._update_jobs(bjs, jobs)
+            # only sleep if we still have pending jobs
+            if len(jobs['pending']) > 0:
+                logger.info('Waiting for batch jobs to finish...')
+                time.sleep(sleep_time)
+                sleep_time *= 2
         self._write_entry(path.join(operations_folder, 'jobs.result'), jobs)
         self.flush_files()
         return jobs
