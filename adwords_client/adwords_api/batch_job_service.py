@@ -4,20 +4,20 @@ from collections import OrderedDict
 import googleads
 
 from . import common as cm
+from adwords_client.adwords_api.operations.utils import batch_job_operation
 
 logger = logging.getLogger(__name__)
 
 
-class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
+class BatchJobHelper(googleads.adwords.BatchJobHelper):
 
     def __init__(self, service):
         request_builder = self.GetRequestBuilder(client=service.client)
         response_parser = self.GetResponseParser()
         super().__init__(request_builder=request_builder, response_parser=response_parser)
-        self.suds_client = service.suds_client
         self.operations = OrderedDict()     # Should honor the operation type insertion order
         self.last_operation = None
-        self.upload_helper = self.GetIncrementalUploadHelper(service.batch_job[0].uploadUrl.url)
+        self.upload_helper = self.GetIncrementalUploadHelper(service.batch_job.result['value'][0].uploadUrl.url)
         self._last_temporary_id = 0
 
     def __getitem__(self, op_type, item):
@@ -64,23 +64,15 @@ class BatchJobHelper(googleads.adwords.BatchJobHelper, cm.SudsFactory):
                 logger.error('Problem uploading the data, retrying...')
 
 
-class BatchJobOperations(cm.SudsFactory):
+class BatchJobOperations:
     def __init__(self, service):
-        self.suds_client = service.suds_client
         self.operations = []
 
     def __getitem__(self, item):
         return self.operations[item]
 
-    def add_batch_job_operation(self, operator, id_=None, status=None):
-        batch_job = self.get_object('BatchJob', 'cm')
-        batch_job.id = id_
-        batch_job.status = status
-
-        operation = self.get_object('BatchJobOperation', 'cm')
-        operation.operator = operator
-        operation.operand = batch_job
-        self.operations.append(operation)
+    def add_batch_job_operation(self, *args, **kwargs):
+        self.operations.append(batch_job_operation(*args, **kwargs))
 
 
 class BatchJobService(cm.BaseService):
@@ -91,7 +83,7 @@ class BatchJobService(cm.BaseService):
 
     def get_wholeoperation_id(self):
         try:
-            return self.batch_job[0].id
+            return self.batch_job.result['value'][0].id
         except IndexError:
             raise RuntimeError('No operations queued. No "whole operation" id created')
 
@@ -103,7 +95,7 @@ class BatchJobService(cm.BaseService):
         self.prepare_mutate()
         self.helper.add_batch_job_operation('ADD')
         self.batch_job = self.mutate(client_customer_id)
-        logger.debug('Created new batchjob:\n%s', self.batch_job)
+        logger.info('Created new batchjob:\n%s', self.batch_job)
         self.helper = BatchJobHelper(self)
 
     def cancel_jobs(self, jobs):
@@ -134,5 +126,5 @@ class BatchJobService(cm.BaseService):
             self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
             self.helper.add_predicate('Id', 'IN', [job for job in jobs[client_id]])
             result[client_id] = list(self.get(client_id))
-        logger.debug('BatchJob Statuses:\n%s', result)
+        logger.info('BatchJob Statuses:\n%s', result)
         return result

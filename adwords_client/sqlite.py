@@ -1,42 +1,12 @@
 import inspect
 import logging
-import os
 import sqlite3
 import tempfile
 
 import sqlalchemy
 import sqlalchemy.orm
-from sqlalchemy.ext.automap import automap_base
 
 logger = logging.getLogger(__name__)
-TEMPORARY_FILES = []
-
-
-def itertable(engine, table_name):
-    try:
-        model = get_model_from_table(table_name, engine)
-    except AttributeError:
-        return
-    Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    s = Session()
-    for instance in s.query(model).order_by(model.client_id, model.id):
-        yield instance
-
-
-def bulk_insert(engine, table_name, data, model=None):
-    model = get_model_from_table(table_name, engine) if model is None else model
-    Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    s = Session()
-    s.bulk_insert_mappings(model, data)
-    s.commit()
-
-
-def get_model_from_table(table_name, engine):
-    metadata = sqlalchemy.MetaData()
-    metadata.reflect(engine, only=[table_name])
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-    return getattr(Base.classes, table_name)
 
 
 def sqlite_add_function(conn, f, function_name=None):
@@ -70,9 +40,6 @@ def get_connection(file_name=None, sqlalquemy_engine=True, connection_factory=No
     elif not connection_factory:
         file_obj = tempfile.NamedTemporaryFile()
         db_source = file_obj.name
-        # with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        #     db_source = temp_file.name
-        #     TEMPORARY_FILES.append(db_source)
 
     connect_string = 'sqlite:///{}'.format(db_source) if db_source != ':memory:' else 'sqlite://'
 
@@ -87,26 +54,6 @@ def get_connection(file_name=None, sqlalquemy_engine=True, connection_factory=No
     if file_obj:
         conn._TEMP_FILE_OBJ = file_obj
     return conn
-
-
-def remove_temporary_files():
-    for file_name in TEMPORARY_FILES:
-        try:
-            os.remove(file_name)
-        except:
-            pass
-
-
-def create_index(engine, table_name, *args):
-    idx_name = '_'.join(args)
-    idx_fields = ', '.join(args)
-    query = 'create index if not exists {0}_{1}_idx on {0} ({2})'.format(table_name, idx_name, idx_fields)
-    if type(engine) == sqlalchemy.engine.Engine:
-        with engine.begin() as conn:
-            conn.execute(query)
-    else:
-        with engine:
-            engine.execute(query)
 
 
 def execute(engine, target_name, operation, *multiparams, schema=None, **params):

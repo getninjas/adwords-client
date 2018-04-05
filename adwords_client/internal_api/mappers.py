@@ -1,5 +1,6 @@
 import re
 import math
+from ..adwords_api import operations
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -80,3 +81,21 @@ MAPPERS = {
     'String': AdwordsMapper(str, str),
     'Identity': AdwordsMapper(noop, noop),
 }
+
+FIELD_MAP = {
+    'client_id': 'Long',
+    'campaign_id': 'Long',
+    'budget_id': 'Long',
+    'language_id': 'Long',
+    'location_id': 'Long',
+}
+
+FIELD_MAP.update(operations.keyword.new_keyword_operation.__annotations__)
+FIELD_MAP.update(operations.adgroup.adgroup_operation.__annotations__)
+FIELD_MAP.update(operations.ad.expanded_ad_operation.__annotations__)
+FIELD_MAP.update(operations.campaign.add_budget.__annotations__)
+FIELD_MAP.update(operations.campaign.campaign_operation.__annotations__)
+
+
+def cast_to_adwords(field_name, field_value):
+    return MAPPERS[FIELD_MAP.get(field_name, 'Identity')].to_adwords(field_value)
