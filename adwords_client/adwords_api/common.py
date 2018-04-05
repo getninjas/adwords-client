@@ -99,8 +99,12 @@ class BaseService:
 
     # Default selector for get, should be overwritten if necessary.
     def prepare_get(self):
-        self.helper = Selector(self.service)
+        self.helper = Selector()
         self.ResultProcessor = PagedResult
+
+    def prepare_mutate(self):
+        self.helper = SyncServiceHelper(self)
+        self.ResultProcessor = SimpleReturnValue
 
     def get(self, client_customer_id=None):
         if client_customer_id:
@@ -114,7 +118,7 @@ class BaseService:
 
 
 class Selector:
-    def __init__(self, service):
+    def __init__(self):
         self.selector = None
         self.selector = {
             'xsi_type': 'Selector',
@@ -144,3 +148,12 @@ class Selector:
             'values': values,
         }
         self.selector['predicates'].append(predicate)
+
+
+class SyncServiceHelper:
+    def __init__(self, label_service):
+        self.label_service = label_service
+        self.operations = []
+
+    def add_operation(self, operation):
+        self.operations.append(operation)

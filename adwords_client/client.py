@@ -9,9 +9,9 @@ import uuid
 from collections import Mapping
 from io import StringIO
 from math import floor, isfinite
-from tempfile import NamedTemporaryFile
-from os import path
 from multiprocessing import Pool
+from os import path
+from tempfile import NamedTemporaryFile
 
 import googleads.adwords
 import pandas as pd
@@ -19,11 +19,11 @@ import yaml
 from sqlalchemy.exc import OperationalError
 
 from . import adwords_api, config, sqlite, storages
-from .internal_api.mappers import MAPPERS
-from .internal_api.builder import OperationsBuilder
 from .adwords_api import common, operations_
 from .adwords_api.managed_customer_service import ManagedCustomerService
 from .adwords_api.sync_job_service import SyncJobService
+from .internal_api.builder import OperationsBuilder
+from .internal_api.mappers import MAPPERS
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,16 @@ def _iter_floats(data):
                 yield float(item)
         except (TypeError, ValueError):
             pass
+
+
+def _get_dict_min_value(data):
+    try:
+        return min(int(floor(u)) for u in _iter_floats(data.values()))
+    except ValueError:
+        logger.debug('Problem getting min value for: %s', str(data))
+        for k, v in data.items():
+            logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
+        raise
 
 
 def multiprocessing_starmap(*args, **kwargs):
@@ -129,20 +139,10 @@ class AdWords:
         for line in self.operations:
             yield json.loads(line)
 
-    @staticmethod
-    def _get_dict_min_value(data):
-        try:
-            return min(int(floor(u)) for u in _iter_floats(data.values()))
-        except ValueError:
-            logger.debug('Problem getting min value for: %s', str(data))
-            for k, v in data.items():
-                logger.debug('Key: %s (%s) Value: %s (%s)', str(k), str(type(k)), str(v), str(type(v)))
-            raise
-
     def _get_min_id(self, entry):
         if 'client_id' not in entry:
             raise ValueError('Every entry must have a "client_id" field.')
-        self.min_id = min(self.min_id, self._get_dict_min_value(entry))
+        self.min_id = min(self.min_id, _get_dict_min_value(entry))
         return entry
 
     def insert(self, data):
@@ -207,370 +207,6 @@ class AdWords:
                 f.write(report_stream)
             return fields
 
-    def get_clicks_report(self, customer_id, target_name, *args, **kwargs):
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
-        exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        kwargs['include_zero_impressions'] = False
-        return self.get_report('CLICK_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_negative_keywords_report(self, customer_id, target_name, *args, **kwargs):
-        create_table = kwargs.pop('create_table', False)
-        exclude_fields = ['ConversionTypeName']
-        exclude_terms = []
-        return self.get_report('CAMPAIGN_NEGATIVE_KEYWORDS_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               ['Segment'],
-                               [],
-                               *args, **kwargs)
-
-    def get_criteria_report(self, customer_id, target_name, *args, **kwargs):
-        create_table = kwargs.pop('create_table', False)
-        exclude_fields = ['ConversionTypeName']
-        exclude_terms = ['Significance', 'ActiveView', 'Average']
-        return self.get_report('CRITERIA_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               ['Segment'],
-                               [],
-                               *args, **kwargs)
-
-    def get_ad_performance_report(self, customer_id, target_name, *args, **kwargs):
-        logger.debug('Running get_ad_performance_report...')
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', ['BusinessName',
-                                                       'ConversionTypeName',
-                                                       'CriterionType',
-                                                       'CriterionId',
-                                                       'ClickType',
-                                                       'ConversionCategoryName',
-                                                       'ConversionTrackerId',
-                                                       'IsNegative'])
-        exclude_terms = kwargs.pop('exclude_terms', ['Significance', 'ActiveView', 'Average'])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'AdGroupId',
-                    'AdGroupName',
-                    'AdGroupStatus',
-                    'Id',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                    'Status',
-                    'CreativeUrlCustomParameters',
-                    'CreativeTrackingUrlTemplate',
-                    'CreativeDestinationUrl',
-                    'CreativeFinalUrls',
-                    'CreativeFinalMobileUrls',
-                    'CreativeFinalAppUrls',
-                    'Headline',
-                    'HeadlinePart1',
-                    'HeadlinePart2',
-                    'Description',
-                    'Description1',
-                    'Description2',
-                    'Path1',
-                    'Path2',
-                    'DisplayUrl',
-                ]
-        return self.get_report('AD_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_keywords_report(self, customer_id, target_name, *args, **kwargs):
-        create_table = kwargs.pop('create_table', False)
-        exclude_fields = ['ConversionTypeName']
-        exclude_terms = ['Significance']
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'AdGroupId',
-                    'AdGroupName',
-                    'AdGroupStatus',
-                    'Id',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                    'Status',
-                    'KeywordMatchType',
-                    'Criteria',
-                    'BiddingStrategySource',
-                    'BiddingStrategyType',
-                    'SearchImpressionShare',
-                    'CpcBid',
-                    'CreativeQualityScore',
-                    'PostClickQualityScore',
-                    'SearchPredictedCtr',
-                    'QualityScore',
-                ]
-        return self.get_report('KEYWORDS_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               ['Segment'],
-                               [],
-                               *args, **kwargs)
-
-    def get_search_terms_report(self, customer_id, target_name, *args, **kwargs):
-        create_table = kwargs.pop('create_table', False)
-        exclude_fields = ['ConversionTypeName']
-        exclude_terms = ['Significance']
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'AdGroupId',
-                    'AdGroupName',
-                    'AdGroupStatus',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                    'Status',
-                    'KeywordId',
-                    'KeywordTextMatchingQuery',
-                    'Query',
-                ]
-        return self.get_report('SEARCH_QUERY_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               ['Segment'],
-                               [],
-                               *args, **kwargs)
-
-    def get_campaigns_report(self, customer_id, target_name, *args, **kwargs):
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
-        exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                    'Status',
-                    'BiddingStrategyType',
-                    'SearchImpressionShare',
-                ]
-        return self.get_report('CAMPAIGN_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_labels_report(self, customer_id, target_name, *args, **kwargs):
-        """
-        Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
-        """
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', [])
-        exclude_terms = kwargs.pop('exclude_terms', [])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',  # The descriptive name of the Customer account.
-                    'ExternalCustomerId',  # The Customer ID.
-                    'LabelId',
-                    'LabelName',
-                ]
-        return self.get_report('LABEL_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_budget_report(self, customer_id, target_name, *args, **kwargs):
-        """
-        Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
-        """
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
-        exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',  # The descriptive name of the Customer account.
-                    'ExternalCustomerId',  # The Customer ID.
-                    'BudgetId',
-                    'BudgetName',
-                    'BudgetReferenceCount',  # The number of campaigns actively using the budget.
-                    'Amount',  # The daily budget
-                    'IsBudgetExplicitlyShared',
-                    # Shared budget (true) or specific to the campaign (false)
-                ]
-        return self.get_report('BUDGET_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_adgroups_report(self, customer_id, target_name, *args, **kwargs):
-        include_fields = kwargs.pop('include_fields', [])
-        exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
-        exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
-        exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-        create_table = kwargs.pop('create_table', False)
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'AdGroupId',
-                    'AdGroupName',
-                    'AdGroupStatus',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                    'Status',
-                    'BiddingStrategySource',
-                    'BiddingStrategyType',
-                    'SearchImpressionShare',
-                    'CpcBid',
-                    'Labels',
-                ]
-        return self.get_report('ADGROUP_PERFORMANCE_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               exclude_behavior,
-                               include_fields,
-                               *args, **kwargs)
-
-    def get_campaigns_location_report(self, customer_id, target_name, *args, **kwargs):
-        create_table = kwargs.pop('create_table', False)
-        exclude_fields = []
-        exclude_terms = ['Significance']
-        use_fields = kwargs.pop('fields', False)
-        if use_fields:
-            try:
-                kwargs['fields'] = list(use_fields)
-            except TypeError:
-                kwargs['fields'] = [
-                    'AccountDescriptiveName',
-                    'ExternalCustomerId',
-                    'CampaignId',
-                    'CampaignName',
-                    'CampaignStatus',
-                    'Id',
-                    'IsNegative',
-                    'BidModifier',
-                    'Impressions',
-                    'Clicks',
-                    'Conversions',
-                    'Cost',
-                ]
-        return self.get_report('CAMPAIGN_LOCATION_TARGET_REPORT',
-                               customer_id,
-                               target_name,
-                               create_table,
-                               exclude_fields,
-                               exclude_terms,
-                               ['Segment'],
-                               [],
-                               *args, **kwargs)
-
-    def create_batch_operation_log(self, table_name, drop=False):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        self.create_operations_table(table_name, 'replace' if drop else 'append')
-
     def log_batchjob(self, batchjob_service, file_name, comment=''):
         logger.info('Running %s...', inspect.stack()[0][3])
         client_id = batchjob_service.client.client_customer_id
@@ -616,12 +252,6 @@ class AdWords:
                             del jobs['pending'][client_id]
                         jobs['done'].setdefault(client_id, {})[dirty_job['id']] = formatted_dirty_job
 
-    def _update_jobs(self, bjs, jobs):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        if len(jobs['pending']) > 0:
-            jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
-            self._update_jobs_status(jobs)
-
     def _collect_jobs(self, operations_folder):
         batchjobs = {}
         for operation in self._read_from_folder(operations_folder, name_filter=lambda x: x.endswith('.result')):
@@ -638,7 +268,8 @@ class AdWords:
         while len(jobs['pending']) > 0:
             if not bjs:
                 bjs = self.service('BatchJobService')
-            self._update_jobs(bjs, jobs)
+            jobs['dirty'] = bjs.get_multiple_status(jobs['pending'])
+            self._update_jobs_status(jobs)
             # only sleep if we still have pending jobs
             if len(jobs['pending']) > 0:
                 logger.info('Waiting for batch jobs to finish...')
@@ -648,52 +279,10 @@ class AdWords:
         self.flush_files()
         return jobs
 
-    def get_min_value(self, table_name, *args):
-        min_value = 0
-        with self.engine.begin() as conn:
-            for column in args:
-                try:
-                    query = 'select min({column}) from {table_name};'.format(column=column, table_name=table_name)
-                    row = conn.execute(query).fetchone()
-                    if row[0] is not None and min_value > row[0]:
-                        min_value = row[0]
-                except OperationalError:
-                    pass
-        return min_value
-
     def load_table(self, table_name):
         query = 'select * from {}'.format(table_name)
         data = pd.read_sql_query(query, self.engine)
         return data
-
-    def flatten_table(self, from_table, to_table):
-        data = list(d for _, d in self.iter_operations_table(from_table))
-        df = pd.DataFrame(data) if data else pd.DataFrame(columns=['id'])
-        df.to_sql(to_table, self.engine, index=False, if_exists='replace')
-
-    def iter_operations_table(self, table_name):
-        for operation in sqlite.itertable(self.engine, table_name):
-            yield operation.client_id, json.loads(operation.operation)
-
-    def create_operations_table(self, table_name, if_exists='replace'):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        if if_exists == 'replace':
-            with self.engine.begin() as conn:
-                conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
-        query = 'create table if not exists {} (' \
-                'id INTEGER PRIMARY KEY AUTOINCREMENT, ' \
-                'client_id INTEGER, ' \
-                'operation text)'.format(table_name)
-        with self.engine.begin() as conn:
-            conn.execute(query)
-        sqlite.create_index(self.engine, table_name, 'id', 'client_id')
-        self.table_models[table_name] = sqlite.get_model_from_table(table_name, self.engine)
-
-    def clear(self, table_name):
-        with self.engine.begin() as conn:
-            conn.execute('DROP TABLE IF EXISTS {}'.format(table_name))
-        self.table_models.pop(table_name, None)
-        self.min_id = 0
 
     def split(self):
         operations_folder = str(uuid.uuid1())
@@ -703,16 +292,6 @@ class AdWords:
             file.close()
         self._open_files = {}
         return operations_folder
-
-    def dump_table(self, df, table_name, table_mappings=None, if_exists='replace', **kwargs):
-        logger.info('Dumping dataframe data to table...')
-        renamed_df = df
-        if table_mappings:
-            renamed_df = df.rename(columns={value: key for key, value in table_mappings.items()}, copy=False)
-        self.create_operations_table(table_name, if_exists=if_exists)
-        data = iter(self._get_min_id(table_name, entry)
-                    for entry in renamed_df.to_dict(orient='records'))
-        sqlite.bulk_insert(self.engine, table_name, data)
 
     def count_table(self, table_name):
         with self.engine.begin() as conn:
@@ -724,7 +303,7 @@ class AdWords:
                 count = 0
         return count
 
-    def _execute_operations(self, file_name):
+    def _batch_operations(self, file_name):
         bjs = self.service('BatchJobService')
         operation_builder = OperationsBuilder(self.min_id)
         previous_client_id = None
@@ -767,7 +346,7 @@ class AdWords:
         self._client = None
         self._engine = None
         self._operations_buffer = None
-        self.map_function(self._execute_operations, files)
+        self.map_function(self._batch_operations, files)
 
     def create_labels(self, table_name):
         logger.info('Running %s...', inspect.stack()[0][3])

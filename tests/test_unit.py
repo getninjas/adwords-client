@@ -1,4 +1,5 @@
 from adwords_client.client import AdWords
+from adwords_client import reports
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -10,7 +11,7 @@ logging.getLogger('adwords_client').setLevel(logging.DEBUG)
 
 def _delete_campaigns():
     client = AdWords(workdir='./tests/generated_files')
-    client.get_campaigns_report(7857288943, 'campaigns_report', 'CampaignStatus != "REMOVED"', create_table=True)
+    reports.get_campaigns_report(client, 7857288943, 'campaigns_report', 'CampaignStatus != "REMOVED"', create_table=True)
     new_report_df = client.load_table('campaigns_report')
     for cmp in new_report_df.itertuples():
         entry = {
@@ -83,7 +84,7 @@ def _create_campaign():
 
 def _get_keywords_report(client=None):
     client = client or AdWords(workdir='./tests/generated_files')
-    client.get_keywords_report(7857288943, 'keywords_report', 'CampaignStatus = "PAUSED"', fields=True)
+    reports.get_keywords_report(client, 7857288943, 'keywords_report', 'CampaignStatus = "PAUSED"', fields=True)
     report_df = client.load_table('keywords_report')
     print(report_df[['AccountDescriptiveName', 'AdGroupName', 'CampaignName', 'Criteria', 'KeywordMatchType', 'CpcBid']].to_string(index=False))
     return report_df
