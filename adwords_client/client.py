@@ -132,8 +132,6 @@ class AdWords:
             yield json.loads(line)
 
     def _get_min_id(self, entry):
-        if 'client_id' not in entry:
-            raise ValueError('Every entry must have a "client_id" field.')
         self.min_id = min(self.min_id, _get_dict_min_value(entry))
         return entry
 
@@ -141,8 +139,10 @@ class AdWords:
         if isinstance(data, Mapping):
             data = [self._get_min_id(data)]
         else:
-            data = iter(self._get_min_id(entry) for entry in data)
+            data = (self._get_min_id(entry) for entry in data)
         for entry in data:
+            if 'client_id' not in entry:
+                raise ValueError('Every entry must have a "client_id" field.')
             self._write_buffer(entry)
 
     def get_report(self, report_type, customer_id, target_name,
