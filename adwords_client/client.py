@@ -280,9 +280,9 @@ class AdWords:
         operations_folder = str(uuid.uuid1())
         for entry in self._read_buffer():
             self._write_entry(path.join(operations_folder, '{}.data'.format(entry['campaign_id'])), entry)
-        for file in self._open_files.values():
+        while self._open_files:
+            _, file = self._open_files.popitem()
             file.close()
-        self._open_files = {}
         return operations_folder
 
     def count_table(self, table_name):
