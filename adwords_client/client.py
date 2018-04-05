@@ -97,7 +97,7 @@ class AdWords:
             self.services[service_name] = getattr(adwords_api, service_name)
         return self.services[service_name](self.client)
 
-    def file(self, name, *args, **kwargs):
+    def get_file(self, name, *args, **kwargs):
         if name not in self._open_files:
             self._open_files[name] = self.storage.open(name, *args, **kwargs)
         return self._open_files[name]
@@ -107,10 +107,10 @@ class AdWords:
             file.flush()
 
     def _write_entry(self, file_name, entry):
-        self.file(file_name).write(json.dumps(entry) + '\n')
+        self.get_file(file_name).write(json.dumps(entry) + '\n')
 
     def _read_entries(self, file_name):
-        file = self.file(file_name, mode='r')
+        file = self.get_file(file_name, mode='r')
         file.flush()
         file.seek(0)
         for line in file:
