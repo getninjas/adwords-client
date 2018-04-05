@@ -89,6 +89,7 @@ class AdWords:
     def operations(self):
         if not self._operations_buffer:
             self._operations_buffer = NamedTemporaryFile('w+')
+            logger.debug('Created temporary buffer file %s', self._operations_buffer.name)
         return self._operations_buffer
 
     def service(self, service_name):
@@ -600,10 +601,14 @@ class AdWords:
                     }
                     progress = {}
                     if 'progressStats' in dirty_job:
-                        # since this will be written to an internal table, we normalize the key
-                        # as this is the column name, and SQL is case insensitive
-                        progress = {k.lower(): v for k, v in dirty_job['progressStats']}
+                        progress = {
+                            'estimated_percent_executed': dirty_job['progressStats']['estimatedPercentExecuted'],
+                            'num_operations_executed': dirty_job['progressStats']['numOperationsExecuted'],
+                            'num_operations_succeeded': dirty_job['progressStats']['numOperationsSucceeded'],
+                            'num_results_written': dirty_job['progressStats']['numResultsWritten'],
+                        }
                     formatted_dirty_job.update(progress)
+
                     # remove job from pending dict if it is done or cancelled and add it to done dict
                     if dirty_job['status'] == 'DONE' or dirty_job['status'] == 'CANCELED':
                         del jobs['pending'][client_id][dirty_job['id']]

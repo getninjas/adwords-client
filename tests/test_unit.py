@@ -5,6 +5,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
 logging.getLogger('oauth2client').setLevel(logging.ERROR)
 logging.getLogger('suds').setLevel(logging.WARNING)
+logging.getLogger('adwords_client').setLevel(logging.DEBUG)
 
 
 def _delete_campaigns():

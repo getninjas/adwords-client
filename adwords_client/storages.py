@@ -1,5 +1,8 @@
+import logging
 import tempfile
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class TemporaryFilesystemStorage:
@@ -12,6 +15,7 @@ class TemporaryFilesystemStorage:
     def open(self, name, mode='w+', *args, **kwargs):
         if name not in self._files:
             self._files[name] = tempfile.NamedTemporaryFile()
+            logger.debug('Created temporary storage file %s', self._files[name].name)
         return open(self._files[name].name, mode=mode, *args, **kwargs)
 
     def listdir(self, path):
