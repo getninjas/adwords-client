@@ -98,7 +98,9 @@ class AdWords:
         return self.services[service_name](self.client)
 
     def file(self, name, *args, **kwargs):
-        return self._open_files.setdefault(name, self.storage.open(name, *args, **kwargs))
+        if name not in self._open_files:
+            self._open_files[name] = self.storage.open(name, *args, **kwargs)
+        return self._open_files[name]
 
     def flush_files(self):
         for file in self._open_files.values():
