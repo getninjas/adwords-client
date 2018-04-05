@@ -67,6 +67,7 @@ class OperationsBuilder:
             elif object_type == 'campaign':
                 yield from self._parse_campaign(operation)
             else:
+                logger.warning('Operation not recognized: {}', operation)
                 yield None
 
     def _parse_keyword(self, operation):
