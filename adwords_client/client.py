@@ -18,7 +18,7 @@ import pandas as pd
 import yaml
 from sqlalchemy.exc import OperationalError
 
-from . import adwords_api, config, sqlite, storages
+from . import adwords_api, config, sqlite, storages, utils
 from .adwords_api import common, operations_
 from .adwords_api.managed_customer_service import ManagedCustomerService
 from .adwords_api.sync_job_service import SyncJobService
@@ -145,8 +145,7 @@ class AdWords:
                 raise ValueError('Every entry must have a "client_id" field.')
             self._write_buffer(entry)
 
-    def get_report(self, report_type, customer_id, target_name,
-                   create_table=False, exclude_fields=[],
+    def get_report(self, report_type, customer_id, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
         logger.info('Getting %s...', report_type)
@@ -167,37 +166,51 @@ class AdWords:
         rd = self.service('ReportDownloader')
         args = [report_type, fields, customer_id] + list(args)
 
-        if not simple_download:
-            report_id = kwargs.pop('report_id', None)
-            reference_date = kwargs.pop('reference_date', None)
-            kwargs['return_stream'] = True
-            report_stream = rd.report(*args, **kwargs)
+        report_stream = rd.report(*args, **kwargs)
+
+        if simple_download:
+            return report_stream
+        else:
+            raw_report = utils.gunzip(report_stream)
             converter = {
                 field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
                 for field in fields if report_csv[field]['Type'] in MAPPERS
             }
-            data = pd.read_csv(io.BytesIO(report_stream),
-                               compression='gzip',
-                               header=None,
-                               names=fields,
-                               encoding='utf-8',
-                               converters=converter,
-                               engine='c')
-            if report_id is not None:
-                data['report_id'] = report_id
-            if reference_date is not None:
-                data['reference_date'] = reference_date
-            data.to_sql(target_name,
-                        self.engine,
-                        index=False,
-                        if_exists='replace' if create_table else 'append')
-            return None
-        else:
-            kwargs['return_stream'] = True
-            report_stream = rd.report(*args, **kwargs)
-            with open(target_name, 'wb') as f:
-                f.write(report_stream)
-            return fields
+            report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
+            report = list(report_iterator())
+            return report
+
+        # if not simple_download:
+        #     report_id = kwargs.pop('report_id', None)
+        #     reference_date = kwargs.pop('reference_date', None)
+        #     kwargs['return_stream'] = True
+        #     report_stream = rd.report(*args, **kwargs)
+        #     converter = {
+        #         field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
+        #         for field in fields if report_csv[field]['Type'] in MAPPERS
+        #     }
+        #     data = pd.read_csv(io.BytesIO(report_stream.read()),
+        #                        compression='gzip',
+        #                        header=None,
+        #                        names=fields,
+        #                        encoding='utf-8',
+        #                        converters=converter,
+        #                        engine='c')
+        #     if report_id is not None:
+        #         data['report_id'] = report_id
+        #     if reference_date is not None:
+        #         data['reference_date'] = reference_date
+        #     data.to_sql(target_name,
+        #                 self.engine,
+        #                 index=False,
+        #                 if_exists='replace' if create_table else 'append')
+        #     return None
+        # else:
+        #     kwargs['return_stream'] = True
+        #     report_stream = rd.report(*args, **kwargs)
+        #     with open(target_name, 'wb') as f:
+        #         f.write(report_stream)
+        #     return fields
 
     def log_batchjob(self, batchjob_service, file_name, comment=''):
         logger.info('Running %s...', inspect.stack()[0][3])
