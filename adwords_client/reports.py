@@ -1,9 +1,4 @@
 import logging
-from . import config
-
-if config.USE_PANDAS:
-    import pandas as pd
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +16,6 @@ def get_clicks_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -36,8 +29,6 @@ def get_negative_keywords_report(client, customer_id, *args, **kwargs):
                                ['Segment'],
                                [],
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -51,8 +42,6 @@ def get_criteria_report(client, customer_id, *args, **kwargs):
                                ['Segment'],
                                [],
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -112,8 +101,6 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -158,8 +145,6 @@ def get_keywords_report(client, customer_id, *args, **kwargs):
                                ['Segment'],
                                [],
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -196,8 +181,6 @@ def get_search_terms_report(client, customer_id, *args, **kwargs):
                                ['Segment'],
                                [],
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -232,8 +215,6 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -263,8 +244,6 @@ def get_labels_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -298,8 +277,6 @@ def get_budget_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -340,8 +317,6 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
                                exclude_behavior,
                                include_fields,
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
 
 
@@ -374,6 +349,4 @@ def get_campaigns_location_report(client, customer_id, *args, **kwargs):
                                ['Segment'],
                                [],
                                *args, **kwargs)
-    if config.USE_PANDAS:
-        report = pd.DataFrame(report)
     return report
