@@ -16,5 +16,3 @@
 
 __version__ = '18.01'   # Date based versioning
 # See: https://packaging.python.org/tutorials/distributing-packages/#date-based-versioning
-
-from . import monkey_patch
