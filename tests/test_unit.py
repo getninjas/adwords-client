@@ -1,6 +1,8 @@
+import logging
+from pprint import pprint
+
 from adwords_client.client import AdWords
 from adwords_client import reports
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
@@ -11,11 +13,11 @@ logging.getLogger('suds').setLevel(logging.WARNING)
 def _delete_campaigns():
     client = AdWords(workdir='./tests/generated_files')
     new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"')
-    for cmp in new_report_df.itertuples():
+    for cmp in new_report_df:
         entry = {
             'object_type': 'campaign',
             'client_id': 7857288943,
-            'campaign_id': int(cmp.CampaignId),
+            'campaign_id': cmp['CampaignId'],
             'campaign_name': 'API test campaign',
             'operator': 'SET',
             'status': 'REMOVED',
@@ -83,7 +85,7 @@ def _create_campaign():
 def _get_keywords_report(client=None):
     client = client or AdWords(workdir='./tests/generated_files')
     report_df = reports.get_keywords_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
-    print(report_df[['AccountDescriptiveName', 'AdGroupName', 'CampaignName', 'Criteria', 'KeywordMatchType', 'CpcBid']].to_string(index=False))
+    pprint(report_df)
     return report_df
 
 
@@ -91,14 +93,14 @@ def _adjust_bids():
     client = AdWords(workdir='./tests/generated_files')
     report_df = _get_keywords_report(client)
 
-    for cmp in report_df.itertuples():
+    for cmp in report_df:
         entry = {
             'object_type': 'keyword',
             'cpc_bid': 4.20,
-            'client_id': int(cmp.ExternalCustomerId),
-            'campaign_id': int(cmp.CampaignId),
-            'adgroup_id': int(cmp.AdGroupId),
-            'criteria_id': int(cmp.Id),
+            'client_id': cmp['ExternalCustomerId'],
+            'campaign_id': cmp['CampaignId'],
+            'adgroup_id': cmp['AdGroupId'],
+            'criteria_id': cmp['Id'],
             'operator': 'SET',
         }
         client.insert(entry)
