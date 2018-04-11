@@ -1,6 +1,8 @@
 import os
 import yaml
 
+USE_PANDAS = os.environ.get('ADWORDS_CLIENT_USE_PANDAS')
+
 FIELDS = {
     'developer_token': None,
     'client_customer_id': None,

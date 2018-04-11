@@ -1,57 +1,62 @@
 import logging
+from . import config
+
+if config.USE_PANDAS:
+    import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
 
-def get_clicks_report(client, customer_id, target_name, *args, **kwargs):
+def get_clicks_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     kwargs['include_zero_impressions'] = False
-    return client.get_report('CLICK_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('CLICK_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_negative_keywords_report(client, customer_id, target_name, *args, **kwargs):
-    create_table = kwargs.pop('create_table', False)
+def get_negative_keywords_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = []
-    return client.get_report('CAMPAIGN_NEGATIVE_KEYWORDS_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             ['Segment'],
-                             [],
-                             *args, **kwargs)
+    report = client.get_report('CAMPAIGN_NEGATIVE_KEYWORDS_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               ['Segment'],
+                               [],
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_criteria_report(client, customer_id, target_name, *args, **kwargs):
-    create_table = kwargs.pop('create_table', False)
+def get_criteria_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance', 'ActiveView', 'Average']
-    return client.get_report('CRITERIA_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             ['Segment'],
-                             [],
-                             *args, **kwargs)
+    report = client.get_report('CRITERIA_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               ['Segment'],
+                               [],
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_ad_performance_report(client, customer_id, target_name, *args, **kwargs):
+def get_ad_performance_report(client, customer_id, *args, **kwargs):
     logger.debug('Running get_ad_performance_report...')
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['BusinessName',
@@ -64,7 +69,6 @@ def get_ad_performance_report(client, customer_id, target_name, *args, **kwargs)
                                                    'IsNegative'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance', 'ActiveView', 'Average'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -101,19 +105,19 @@ def get_ad_performance_report(client, customer_id, target_name, *args, **kwargs)
                 'Path2',
                 'DisplayUrl',
             ]
-    return client.get_report('AD_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('AD_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_keywords_report(client, customer_id, target_name, *args, **kwargs):
-    create_table = kwargs.pop('create_table', False)
+def get_keywords_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
@@ -147,19 +151,19 @@ def get_keywords_report(client, customer_id, target_name, *args, **kwargs):
                 'SearchPredictedCtr',
                 'QualityScore',
             ]
-    return client.get_report('KEYWORDS_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             ['Segment'],
-                             [],
-                             *args, **kwargs)
+    report = client.get_report('KEYWORDS_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               ['Segment'],
+                               [],
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_search_terms_report(client, customer_id, target_name, *args, **kwargs):
-    create_table = kwargs.pop('create_table', False)
+def get_search_terms_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
@@ -185,23 +189,23 @@ def get_search_terms_report(client, customer_id, target_name, *args, **kwargs):
                 'KeywordTextMatchingQuery',
                 'Query',
             ]
-    return client.get_report('SEARCH_QUERY_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             ['Segment'],
-                             [],
-                             *args, **kwargs)
+    report = client.get_report('SEARCH_QUERY_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               ['Segment'],
+                               [],
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_campaigns_report(client, customer_id, target_name, *args, **kwargs):
+def get_campaigns_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -221,18 +225,19 @@ def get_campaigns_report(client, customer_id, target_name, *args, **kwargs):
                 'BiddingStrategyType',
                 'SearchImpressionShare',
             ]
-    return client.get_report('CAMPAIGN_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('CAMPAIGN_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_labels_report(client, customer_id, target_name, *args, **kwargs):
+def get_labels_report(client, customer_id, *args, **kwargs):
     """
     Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
     """
@@ -240,7 +245,6 @@ def get_labels_report(client, customer_id, target_name, *args, **kwargs):
     exclude_fields = kwargs.pop('exclude_fields', [])
     exclude_terms = kwargs.pop('exclude_terms', [])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -252,18 +256,19 @@ def get_labels_report(client, customer_id, target_name, *args, **kwargs):
                 'LabelId',
                 'LabelName',
             ]
-    return client.get_report('LABEL_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('LABEL_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_budget_report(client, customer_id, target_name, *args, **kwargs):
+def get_budget_report(client, customer_id, *args, **kwargs):
     """
     Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
     """
@@ -271,7 +276,6 @@ def get_budget_report(client, customer_id, target_name, *args, **kwargs):
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -287,23 +291,23 @@ def get_budget_report(client, customer_id, target_name, *args, **kwargs):
                 'IsBudgetExplicitlyShared',
                 # Shared budget (true) or specific to the campaign (false)
             ]
-    return client.get_report('BUDGET_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('BUDGET_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_adgroups_report(client, customer_id, target_name, *args, **kwargs):
+def get_adgroups_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
-    create_table = kwargs.pop('create_table', False)
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -329,19 +333,19 @@ def get_adgroups_report(client, customer_id, target_name, *args, **kwargs):
                 'CpcBid',
                 'Labels',
             ]
-    return client.get_report('ADGROUP_PERFORMANCE_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             exclude_behavior,
-                             include_fields,
-                             *args, **kwargs)
+    report = client.get_report('ADGROUP_PERFORMANCE_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               exclude_behavior,
+                               include_fields,
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
 
 
-def get_campaigns_location_report(client, customer_id, target_name, *args, **kwargs):
-    create_table = kwargs.pop('create_table', False)
+def get_campaigns_location_report(client, customer_id, *args, **kwargs):
     exclude_fields = []
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
@@ -363,12 +367,13 @@ def get_campaigns_location_report(client, customer_id, target_name, *args, **kwa
                 'Conversions',
                 'Cost',
             ]
-    return client.get_report('CAMPAIGN_LOCATION_TARGET_REPORT',
-                             customer_id,
-                             target_name,
-                             create_table,
-                             exclude_fields,
-                             exclude_terms,
-                             ['Segment'],
-                             [],
-                             *args, **kwargs)
+    report = client.get_report('CAMPAIGN_LOCATION_TARGET_REPORT',
+                               customer_id,
+                               exclude_fields,
+                               exclude_terms,
+                               ['Segment'],
+                               [],
+                               *args, **kwargs)
+    if config.USE_PANDAS:
+        report = pd.DataFrame(report)
+    return report
