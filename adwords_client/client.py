@@ -15,7 +15,7 @@ from tempfile import NamedTemporaryFile
 
 import googleads.adwords
 
-from . import adwords_api, config, sqlite, storages, utils
+from . import adwords_api, config, storages, utils
 from .adwords_api import common
 from .adwords_api.managed_customer_service import ManagedCustomerService
 from .internal_api.builder import OperationsBuilder
@@ -57,7 +57,6 @@ class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None):
         self._client = None
         self.services = {}
-        self._engine = None
         self.table_models = {}
         self.min_id = 0
         self.map_function = map_function or multiprocessing_starmap
@@ -74,12 +73,6 @@ class AdWords:
             config.configure(path)
             self._client = adwords_client_factory(config.FIELDS)
         return self._client
-
-    @property
-    def engine(self):
-        if not self._engine:
-            self._engine = sqlite.get_connection()
-        return self._engine
 
     @property
     def operations(self):
@@ -298,7 +291,6 @@ class AdWords:
         _, files = self.storage.listdir(operations_folder)
         files = [[path.join(operations_folder, file)] for file in files]
         self._client = None
-        self._engine = None
         self._operations_buffer = None
         self.map_function(self._batch_operations, files)
 
