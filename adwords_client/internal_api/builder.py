@@ -1,6 +1,6 @@
 import logging
 from .mappers import cast_to_adwords
-from ..adwords_api.operations import campaign, adgroup, keyword, ad
+from ..adwords_api.operations import campaign, adgroup, keyword, ad, label
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,8 @@ class OperationsBuilder:
                 yield from self._parse_ad(operation)
             elif object_type == 'campaign':
                 yield from self._parse_campaign(operation)
+            elif object_type == 'label':
+                yield from self._parse_label(operation)
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
@@ -90,4 +92,7 @@ class OperationsBuilder:
         for location_id in operation.get('locations', []):
             location_id = cast_to_adwords('location_id', location_id)
             yield campaign.add_campaign_location(location_id=location_id, **operation)
+
+    def _parse_label(self, operation):
+        yield label.new_label_operation(**operation)
 
