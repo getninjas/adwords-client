@@ -3,8 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_clicks_report(client, customer_id, *args, **kwargs
-                      ):
+def get_clicks_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
@@ -22,8 +21,7 @@ def get_clicks_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_negative_keywords_report(client, customer_id, *args, **kwargs
-                                 ):
+def get_negative_keywords_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = []
     report = client.get_report(
@@ -38,8 +36,7 @@ def get_negative_keywords_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_criteria_report(client, customer_id, *args, **kwargs
-                        ):
+def get_criteria_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance', 'ActiveView', 'Average']
     report = client.get_report(
@@ -54,8 +51,7 @@ def get_criteria_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_ad_performance_report(client, customer_id, *args, **kwargs
-                              ):
+def get_ad_performance_report(client, customer_id, *args, **kwargs):
     logger.debug('Running get_ad_performance_report...')
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['BusinessName',
@@ -116,8 +112,7 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_keywords_report(client, customer_id, *args, **kwargs
-                        ):
+def get_keywords_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
@@ -163,8 +158,7 @@ def get_keywords_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_search_terms_report(client, customer_id, *args, **kwargs
-                            ):
+def get_search_terms_report(client, customer_id, *args, **kwargs):
     exclude_fields = ['ConversionTypeName']
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
@@ -202,8 +196,7 @@ def get_search_terms_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_campaigns_report(client, customer_id, *args, **kwargs
-                         ):
+def get_campaigns_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
@@ -239,8 +232,7 @@ def get_campaigns_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_labels_report(client, customer_id, *args, **kwargs
-                      ):
+def get_labels_report(client, customer_id, *args, **kwargs):
     """
     Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
     """
@@ -272,8 +264,7 @@ def get_labels_report(client, customer_id, *args, **kwargs
 
 
 def get_budget_report(
-        client, customer_id, *args, **kwargs
-):
+        client, customer_id, *args, **kwargs):
     """
     Get report from AdWords account 'customer_id' and save to Redshift 'target_name' table
     """
@@ -308,8 +299,7 @@ def get_budget_report(
     return report
 
 
-def get_adgroups_report(client, customer_id, *args, **kwargs
-                        ):
+def get_adgroups_report(client, customer_id, *args, **kwargs):
     include_fields = kwargs.pop('include_fields', [])
     exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
@@ -351,8 +341,7 @@ def get_adgroups_report(client, customer_id, *args, **kwargs
     return report
 
 
-def get_campaigns_location_report(client, customer_id, *args, **kwargs
-                                  ):
+def get_campaigns_location_report(client, customer_id, *args, **kwargs):
     exclude_fields = []
     exclude_terms = ['Significance']
     use_fields = kwargs.pop('fields', False)
