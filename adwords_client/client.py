@@ -1,11 +1,11 @@
 import csv
 import datetime
 import inspect
-import io
 import json
 import logging
 import time
 import uuid
+import yaml
 from collections import Mapping
 from io import StringIO
 from math import floor, isfinite
@@ -14,14 +14,10 @@ from os import path
 from tempfile import NamedTemporaryFile
 
 import googleads.adwords
-import pandas as pd
-import yaml
-from sqlalchemy.exc import OperationalError
 
-from . import adwords_api, config, sqlite, storages
-from .adwords_api import common, operations_
+from . import adwords_api, config, storages, utils
+from .adwords_api import common
 from .adwords_api.managed_customer_service import ManagedCustomerService
-from .adwords_api.sync_job_service import SyncJobService
 from .internal_api.builder import OperationsBuilder
 from .internal_api.mappers import MAPPERS
 
@@ -61,7 +57,6 @@ class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None):
         self._client = None
         self.services = {}
-        self._engine = None
         self.table_models = {}
         self.min_id = 0
         self.map_function = map_function or multiprocessing_starmap
@@ -78,12 +73,6 @@ class AdWords:
             config.configure(path)
             self._client = adwords_client_factory(config.FIELDS)
         return self._client
-
-    @property
-    def engine(self):
-        if not self._engine:
-            self._engine = sqlite.get_connection()
-        return self._engine
 
     @property
     def operations(self):
@@ -145,8 +134,7 @@ class AdWords:
                 raise ValueError('Every entry must have a "client_id" field.')
             self._write_buffer(entry)
 
-    def get_report(self, report_type, customer_id, target_name,
-                   create_table=False, exclude_fields=[],
+    def get_report(self, report_type, customer_id, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
         logger.info('Getting %s...', report_type)
@@ -167,37 +155,19 @@ class AdWords:
         rd = self.service('ReportDownloader')
         args = [report_type, fields, customer_id] + list(args)
 
-        if not simple_download:
-            report_id = kwargs.pop('report_id', None)
-            reference_date = kwargs.pop('reference_date', None)
-            kwargs['return_stream'] = True
-            report_stream = rd.report(*args, **kwargs)
+        report_stream = rd.report(*args, **kwargs)
+
+        if simple_download:
+            return report_stream
+        else:
+            raw_report = utils.gunzip(report_stream)
             converter = {
                 field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
                 for field in fields if report_csv[field]['Type'] in MAPPERS
             }
-            data = pd.read_csv(io.BytesIO(report_stream),
-                               compression='gzip',
-                               header=None,
-                               names=fields,
-                               encoding='utf-8',
-                               converters=converter,
-                               engine='c')
-            if report_id is not None:
-                data['report_id'] = report_id
-            if reference_date is not None:
-                data['reference_date'] = reference_date
-            data.to_sql(target_name,
-                        self.engine,
-                        index=False,
-                        if_exists='replace' if create_table else 'append')
-            return None
-        else:
-            kwargs['return_stream'] = True
-            report_stream = rd.report(*args, **kwargs)
-            with open(target_name, 'wb') as f:
-                f.write(report_stream)
-            return fields
+            report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
+            report = list(report_iterator())
+            return report
 
     def log_batchjob(self, batchjob_service, file_name, comment=''):
         logger.info('Running %s...', inspect.stack()[0][3])
@@ -271,11 +241,6 @@ class AdWords:
         self.flush_files()
         return jobs
 
-    def load_table(self, table_name):
-        query = 'select * from {}'.format(table_name)
-        data = pd.read_sql_query(query, self.engine)
-        return data
-
     def split(self):
         operations_folder = str(uuid.uuid1())
         for entry in self._read_buffer():
@@ -284,16 +249,6 @@ class AdWords:
             _, file = self._open_files.popitem()
             file.close()
         return operations_folder
-
-    def count_table(self, table_name):
-        with self.engine.begin() as conn:
-            try:
-                query = 'select count(*) from {table_name};'.format(table_name=table_name)
-                for row in conn.execute(query):
-                    count = row[0]
-            except OperationalError:
-                count = 0
-        return count
 
     def _batch_operations(self, file_name):
         bjs = self.service('BatchJobService')
@@ -336,32 +291,8 @@ class AdWords:
         _, files = self.storage.listdir(operations_folder)
         files = [[path.join(operations_folder, file)] for file in files]
         self._client = None
-        self._engine = None
         self._operations_buffer = None
         self.map_function(self._batch_operations, files)
-
-    def create_labels(self, table_name):
-        logger.info('Running %s...', inspect.stack()[0][3])
-        query = 'select * from {}'.format(table_name)
-
-        n_entries = self.count_table(table_name)
-        if n_entries == 0:
-            return
-
-        df = pd.read_sql_query(query, self.engine)
-        # Specific stuff ahead
-
-        sjs = SyncJobService(self)
-        # Build operations
-        for client_id, lines in df.groupby('client_id'):
-            # Apply operations
-            operations_list = []
-            for label_op in lines.itertuples():
-                operations_list.extend(
-                    operations_.add_label_operation(label_op.label)
-                )
-
-            sjs.mutate(client_id, operations_list, 'LabelService')
 
     def get_accounts(self, client_id=None):
         mcs = ManagedCustomerService(self.client)

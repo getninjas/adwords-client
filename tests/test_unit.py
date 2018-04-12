@@ -1,6 +1,8 @@
+import logging
+from pprint import pprint
+
 from adwords_client.client import AdWords
 from adwords_client import reports
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
@@ -10,13 +12,12 @@ logging.getLogger('suds').setLevel(logging.WARNING)
 
 def _delete_campaigns():
     client = AdWords(workdir='./tests/generated_files')
-    reports.get_campaigns_report(client, 7857288943, 'campaigns_report', 'CampaignStatus != "REMOVED"', create_table=True)
-    new_report_df = client.load_table('campaigns_report')
-    for cmp in new_report_df.itertuples():
+    new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"')
+    for campaign in new_report_df:
         entry = {
             'object_type': 'campaign',
             'client_id': 7857288943,
-            'campaign_id': int(cmp.CampaignId),
+            'campaign_id': campaign['CampaignId'],
             'campaign_name': 'API test campaign',
             'operator': 'SET',
             'status': 'REMOVED',
@@ -83,9 +84,8 @@ def _create_campaign():
 
 def _get_keywords_report(client=None):
     client = client or AdWords(workdir='./tests/generated_files')
-    reports.get_keywords_report(client, 7857288943, 'keywords_report', 'CampaignStatus = "PAUSED"', fields=True)
-    report_df = client.load_table('keywords_report')
-    print(report_df[['AccountDescriptiveName', 'AdGroupName', 'CampaignName', 'Criteria', 'KeywordMatchType', 'CpcBid']].to_string(index=False))
+    report_df = reports.get_keywords_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
+    pprint(report_df)
     return report_df
 
 
@@ -93,14 +93,14 @@ def _adjust_bids():
     client = AdWords(workdir='./tests/generated_files')
     report_df = _get_keywords_report(client)
 
-    for cmp in report_df.itertuples():
+    for campaign in report_df:
         entry = {
             'object_type': 'keyword',
             'cpc_bid': 4.20,
-            'client_id': int(cmp.ExternalCustomerId),
-            'campaign_id': int(cmp.CampaignId),
-            'adgroup_id': int(cmp.AdGroupId),
-            'criteria_id': int(cmp.Id),
+            'client_id': campaign['ExternalCustomerId'],
+            'campaign_id': campaign['CampaignId'],
+            'adgroup_id': campaign['AdGroupId'],
+            'criteria_id': campaign['Id'],
             'operator': 'SET',
         }
         client.insert(entry)
