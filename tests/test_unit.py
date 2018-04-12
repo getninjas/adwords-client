@@ -13,11 +13,11 @@ logging.getLogger('suds').setLevel(logging.WARNING)
 def _delete_campaigns():
     client = AdWords(workdir='./tests/generated_files')
     new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"')
-    for cmp in new_report_df:
+    for campaign in new_report_df:
         entry = {
             'object_type': 'campaign',
             'client_id': 7857288943,
-            'campaign_id': cmp['CampaignId'],
+            'campaign_id': campaign['CampaignId'],
             'campaign_name': 'API test campaign',
             'operator': 'SET',
             'status': 'REMOVED',
@@ -93,14 +93,14 @@ def _adjust_bids():
     client = AdWords(workdir='./tests/generated_files')
     report_df = _get_keywords_report(client)
 
-    for cmp in report_df:
+    for campaign in report_df:
         entry = {
             'object_type': 'keyword',
             'cpc_bid': 4.20,
-            'client_id': cmp['ExternalCustomerId'],
-            'campaign_id': cmp['CampaignId'],
-            'adgroup_id': cmp['AdGroupId'],
-            'criteria_id': cmp['Id'],
+            'client_id': campaign['ExternalCustomerId'],
+            'campaign_id': campaign['CampaignId'],
+            'adgroup_id': campaign['AdGroupId'],
+            'criteria_id': campaign['Id'],
             'operator': 'SET',
         }
         client.insert(entry)
