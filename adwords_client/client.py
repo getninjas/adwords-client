@@ -70,7 +70,7 @@ class AdWords:
     @property
     def client(self):
         if not self._client:
-            config.configure(path)
+            config.configure()
             self._client = adwords_client_factory(config.FIELDS)
         return self._client
 
@@ -296,4 +296,4 @@ class AdWords:
 
     def get_accounts(self, client_id=None):
         mcs = ManagedCustomerService(self.client)
-        return {k[1]: v[1] for k, v in mcs.get_customers(client_id)}
+        return {account['name']: account for account in mcs.get_customers(client_id)}
