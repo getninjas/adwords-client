@@ -17,7 +17,6 @@ import googleads.adwords
 
 from . import adwords_api, config, storages, utils
 from .adwords_api import common
-from .adwords_api.managed_customer_service import ManagedCustomerService
 from .internal_api.builder import OperationsBuilder
 from .internal_api.mappers import MAPPERS
 
@@ -321,5 +320,5 @@ class AdWords:
             self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):
-        mcs = ManagedCustomerService(self.client)
+        mcs = self.service('ManagedCustomerService')
         return {account['name']: account for account in mcs.get_customers(client_id)}
