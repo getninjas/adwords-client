@@ -279,7 +279,7 @@ class AdWords:
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def execute_operations(self, operations_folder):
+    def execute_operations(self, operations_folder=None, sync=False):
         """
         Possible columns in the table:
 
@@ -287,12 +287,17 @@ class AdWords:
         :param batchlog_table:
         :return:
         """
-        logger.info('Running %s...', inspect.stack()[0][3])
-        _, files = self.storage.listdir(operations_folder)
-        files = [[path.join(operations_folder, file)] for file in files]
-        self._client = None
-        self._operations_buffer = None
-        self.map_function(self._batch_operations, files)
+        if sync:
+            raise NotImplementedError()
+        else:
+            if not operations_folder:
+                raise ValueError('Async operations must have an operation folder defined.')
+            logger.info('Running %s...', inspect.stack()[0][3])
+            _, files = self.storage.listdir(operations_folder)
+            files = [[path.join(operations_folder, file)] for file in files]
+            self._client = None
+            self._operations_buffer = None
+            self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):
         mcs = ManagedCustomerService(self.client)
