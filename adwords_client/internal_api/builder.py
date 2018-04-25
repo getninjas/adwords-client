@@ -68,9 +68,18 @@ class OperationsBuilder:
                 yield from self._parse_campaign(operation)
             elif object_type == 'label':
                 yield from self._parse_label(operation)
+            # add new internal_operations types here -- such as "shared_set"
+            # elif object_type == 'shared_set':
+            #     raise NotImplementedError()
+            #     yield from self._shared_set(operation)
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
+
+    # create a new module under adwords_client.adwords_api.operations named "shared_set" that parses the internal op
+    # def _shared_set(self, operation):
+    #     raise NotImplementedError()
+    #     yield shared_set.new_shared_set_operation(**operation)
 
     def _parse_keyword(self, operation):
         yield keyword.new_keyword_operation(**operation)
