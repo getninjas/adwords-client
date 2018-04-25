@@ -286,6 +286,9 @@ class AdWords:
         #     raise NotImplementedError()
 
         # must decide how to upload these operations
+        # maybe create an Executor that gets the service depending on the operation
+        # it might raise an error if there are multiple operations type in the same
+        # _sync_operations execution
         # raise NotImplementedError()
 
         # maybe clean buffer?
