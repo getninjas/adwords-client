@@ -276,6 +276,23 @@ class AdWords:
             bjs.helper.upload_operations(is_last=True)
         self.flush_files()
 
+    def _sync_operations(self):
+        raise NotImplementedError()
+        # Must create an operation builder
+        # operation_builder = OperationsBuilder()
+
+        # must parse internal_operations into adwords operations -- use self._read_buffer
+        # for operation in operation_builder(internal_operation):
+        #     raise NotImplementedError()
+
+        # must decide how to upload these operations
+        # raise NotImplementedError()
+
+        # maybe clean buffer?
+        # raise NotImplementedError()
+
+        # must get, maybe process, and return results
+        # raise NotImplementedError()
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
@@ -289,6 +306,7 @@ class AdWords:
         """
         if sync:
             raise NotImplementedError()
+            # call self._sync_operations straight away or use map_function?
         else:
             if not operations_folder:
                 raise ValueError('Async operations must have an operation folder defined.')
