@@ -80,6 +80,7 @@ MAPPERS = {
     'Integer': AdwordsMapper(process_integer, cast_int),
     'String': AdwordsMapper(str, str),
     'Identity': AdwordsMapper(noop, noop),
+    'String[]': AdwordsMapper(noop, noop),
 }
 
 FIELD_MAP = {

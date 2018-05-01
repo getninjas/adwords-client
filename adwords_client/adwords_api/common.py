@@ -116,6 +116,11 @@ class BaseService:
             self.client.SetClientCustomerId(client_customer_id)
         return self.ResultProcessor(self.service.mutate, self.helper.operations)
 
+    def mutate_labels(self, client_customer_id=None):
+        if client_customer_id:
+            self.client.SetClientCustomerId(client_customer_id)
+        return self.ResultProcessor(self.service.mutateLabel, self.helper.operations)
+
 
 class Selector:
     def __init__(self):
@@ -151,9 +156,9 @@ class Selector:
 
 
 class SyncServiceHelper:
-    def __init__(self, label_service):
-        self.label_service = label_service
+    def __init__(self, service):
+        self.service = service
         self.operations = []
 
-    def add_operation(self, operation):
-        self.operations.append(operation)
+    def add_operations(self, operations):
+        self.operations.extend(operations)

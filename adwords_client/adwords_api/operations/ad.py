@@ -103,3 +103,20 @@ def _abstract_ad(ad_id: 'Long' = None):
         'id': ad_id,
     }
     return ad
+
+
+def ad_label_operation(ad_id: 'Long' = None,
+                       operator: 'String' = 'ADD',
+                       ad_group_id: 'Long' = None,
+                       label_id: 'Long' = None,
+                       **kwargs):
+    operation = {
+        'operator': operator.upper(),
+        'operand': {
+            'adGroupId': ad_group_id,
+            'adId': ad_id,
+            'labelId': label_id
+
+        }
+    }
+    return operation

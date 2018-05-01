@@ -1,6 +1,6 @@
 import logging
 from .mappers import cast_to_adwords
-from ..adwords_api.operations import campaign, adgroup, keyword, ad, label
+from ..adwords_api.operations import campaign, adgroup, keyword, ad, label, campaign_shared_set, shared_criterion, shared_set, managed_customer, budget_order, attach_label, campaign_extensions_setting, campaign_criterion
 
 logger = logging.getLogger(__name__)
 
@@ -68,18 +68,65 @@ class OperationsBuilder:
                 yield from self._parse_campaign(operation)
             elif object_type == 'label':
                 yield from self._parse_label(operation)
-            # add new internal_operations types here -- such as "shared_set"
-            # elif object_type == 'shared_set':
-            #     raise NotImplementedError()
-            #     yield from self._shared_set(operation)
+            elif object_type == 'managed_customer':
+                yield from self._parse_managed_customer(operation)
+            elif object_type == 'customer':
+                yield from self._parse_customer(operation)
+            elif object_type == 'shared_criterion':
+                yield from self._parse_shared_criterion(operation)
+            elif object_type == 'campaign_shared_set':
+                yield from self._parse_campaign_shared_set(operation)
+            elif object_type == 'shared_set':
+                yield from self._parse_shared_set(operation)
+            elif object_type == 'budget_order':
+                yield from self._parse_budget_order(operation)
+            elif object_type == 'attach_label':
+                yield from self._parse_attach_label(operation)
+            elif object_type == 'campaign_sitelink':
+                yield from self._parse_sitelinks_setting_for_campaign(operation)
+            elif object_type == 'campaign_structured_snippet':
+                yield from self._parse_structured_snippets_setting_for_campaign(operation)
+            elif object_type == 'campaign_callout':
+                yield from self._parse_callouts_setting_for_campaign(operation)
+            elif object_type == 'campaign_ad_schedule':
+                yield from self._parse_ad_schedule_for_campaign(operation)
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
 
-    # create a new module under adwords_client.adwords_api.operations named "shared_set" that parses the internal op
-    # def _shared_set(self, operation):
-    #     raise NotImplementedError()
-    #     yield shared_set.new_shared_set_operation(**operation)
+    def _parse_ad_schedule_for_campaign(self, operation):
+        yield campaign_criterion.ad_schedule_operation(**operation)
+
+    def _parse_callouts_setting_for_campaign(self, operation):
+        yield campaign_extensions_setting.callout_setting_for_campaign_operation(**operation)
+
+    def _parse_structured_snippets_setting_for_campaign(self, operation):
+        yield campaign_extensions_setting.structured_snippet_setting_for_campaign_operation(**operation)
+
+    def _parse_sitelinks_setting_for_campaign(self, operation):
+        yield campaign_extensions_setting.sitelink_setting_for_campaign_operation(**operation)
+
+    def _parse_attach_label(self, operation):
+        yield attach_label.attach_label_operation(**operation)
+
+    def _parse_shared_set(self, operation):
+        yield shared_set.shared_set_operation(**operation)
+
+    def _parse_campaign_shared_set(self, operation):
+        yield campaign_shared_set.campaign_shared_set_operation(**operation)
+
+    def _parse_shared_criterion(self, operation):
+        yield shared_criterion.shared_criterion_operation(**operation)
+
+    def _parse_managed_customer(self, operation):
+        yield managed_customer.managed_customer_operation(**operation)
+
+    def _parse_customer(self, operation):
+        operation['object_type'] = 'customer'
+        yield operation
+
+    def _parse_budget_order(self, operation):
+        yield budget_order.budget_order_operation(**operation)
 
     def _parse_keyword(self, operation):
         yield keyword.new_keyword_operation(**operation)
@@ -104,4 +151,3 @@ class OperationsBuilder:
 
     def _parse_label(self, operation):
         yield label.new_label_operation(**operation)
-

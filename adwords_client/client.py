@@ -275,24 +275,89 @@ class AdWords:
             bjs.helper.upload_operations(is_last=True)
         self.flush_files()
 
+    def _get_service_from_object_type(self, internal_operation):
+
+        object_type_service_mapper = {
+            'managed_customer': 'ManagedCustomerService',
+            'customer': 'CustomerService',
+            'shared_criterion': 'SharedCriterionService',
+            'campaign_shared_set': 'CampaignSharedSetService',
+            'shared_set': 'SharedSetService',
+            'budget_order': 'BudgetOrderService',
+            'campaign': 'CampaignService',
+            'billing_account': 'BudgetOrderService',
+            'label': 'LabelService',
+            'campaign_ad_schedule': 'CampaignCriterionService',
+            'campaign_targeted_location': 'CampaignCriterionService',
+            'campaign_sitelink': 'CampaignExtensionSettingService',
+            'campaign_callout': 'CampaignExtensionSettingService',
+            'campaign_structured_snippet': 'CampaignExtensionSettingService',
+            'account_label': 'AccountLabelService',
+            'campaign_language': 'CampaignCriterionService'
+        }
+
+        if internal_operation['object_type'] == 'attach_label':
+            if 'ad_id' in internal_operation:
+                raise NotImplementedError()
+            elif 'adgroup_id' in internal_operation:
+                raise NotImplementedError()
+            elif 'campaign_id' in internal_operation:
+                return object_type_service_mapper.get('campaign')
+            elif 'customer_id' in internal_operation:
+                return object_type_service_mapper.get('managed_customer')
+
+        try:
+            return object_type_service_mapper.get(internal_operation['object_type'])
+        except KeyError:
+            logger.debug('There is no custom service class for this object_type: %s', str(internal_operation['object_type']))
+
     def _sync_operations(self):
-        raise NotImplementedError()
-        # Must create an operation builder
-        # operation_builder = OperationsBuilder()
+        previous_client_id = None
+        previous_service_name = None
+        operation_builder = OperationsBuilder()
+        results = []
+        adwords_operations = []
+        for internal_operation in self._read_buffer():
+            client_id = internal_operation['client_id']
+            service_name = self._get_service_from_object_type(internal_operation)
+            for adwords_operation in operation_builder(internal_operation):
+                if previous_client_id is None or service_name is None:
+                    adwords_operations.append(adwords_operation)
+                    previous_client_id = client_id
+                    previous_service_name = service_name
+                elif client_id != previous_client_id or service_name != previous_service_name:
+                    service = self.service(previous_service_name)
+                    label_operations = [adwords_operation for adwords_operation in adwords_operations if 'labelId' in adwords_operation['operand']]
+                    regular_operations = [adwords_operation for adwords_operation in adwords_operations if 'labelId' not in adwords_operation['operand']]
 
-        # must parse internal_operations into adwords operations -- use self._read_buffer
-        # for operation in operation_builder(internal_operation):
-        #     raise NotImplementedError()
+                    if len(label_operations) > 0:
+                        results.append(service.cs_mutate_labels(previous_client_id, label_operations))
+                    if len(regular_operations) > 0:
+                        results.append(service.cs_mutate(previous_client_id, regular_operations))
+                    label_operations = []
+                    regular_operations = []
+                    adwords_operations = [adwords_operation]
+                    previous_client_id = client_id
+                    previous_service_name = service_name
+                else:
+                    adwords_operations.append(adwords_operation)
+                    previous_client_id = client_id
+                    previous_service_name = service_name
 
-        # must decide how to upload these operations
-        # maybe create an Executor that gets the service depending on the operation
-        # it might raise an error if there are multiple operations type in the same
-        # _sync_operations execution
-        # raise NotImplementedError()
+        service = self.service(previous_service_name)
+        label_operations = [adwords_operation for adwords_operation in adwords_operations if
+                            'labelId' in adwords_operation['operand']]
+        regular_operations = [adwords_operation for adwords_operation in adwords_operations if
+                              'labelId' not in adwords_operation['operand']]
+        if len(label_operations) > 0:
+            results.append(service.cs_mutate_labels(previous_client_id, label_operations))
+        if len(regular_operations) > 0:
+            results.append(service.cs_mutate(previous_client_id, regular_operations))
 
+        self._operations_buffer = None
         # maybe clean buffer?
         # raise NotImplementedError()
-
+        return results
         # must get, maybe process, and return results
         # raise NotImplementedError()
 
@@ -307,7 +372,7 @@ class AdWords:
         :return:
         """
         if sync:
-            raise NotImplementedError()
+            return self._sync_operations()
             # call self._sync_operations straight away or use map_function?
         else:
             if not operations_folder:
@@ -322,3 +387,12 @@ class AdWords:
     def get_accounts(self, client_id=None):
         mcs = self.service('ManagedCustomerService')
         return {account['name']: account for account in mcs.get_customers(client_id)}
+
+    def get_entities(self, get_internal_operation):
+        try:
+            service_name = self._get_service_from_object_type(get_internal_operation)
+            service = self.service(service_name)
+            results = service.cs_get(get_internal_operation)
+            return [result for result in results]
+        except KeyError:
+            logger.debug('There is no custom service class for this object_type: %s', str(get_internal_operation['object_type']))

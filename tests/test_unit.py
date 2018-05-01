@@ -110,6 +110,44 @@ def _adjust_bids():
     client.wait_jobs(operations_folder)
 
 
+def _sync_operations():
+    client = AdWords()
+    client.insert({'object_type': 'campaign_callout',
+              'client_id': 3709730243,
+              'callout_text_list': ['Clique aqui','Somos Legais','Contrate aqui'],
+              'campaign_id': 1341876198
+              })
+
+    client.insert({
+        'object_type': 'campaign_sitelink',
+        'client_id': 3709730243,
+        'sitelinks_configuration': [{'sitelink_text': 'Aqui é mais barato',
+                                                  'sitelink_final_url': 'https://www.getninjas.com.br/'},
+                                    {'sitelink_text': 'Aqui é mais legal',
+                                     'sitelink_final_url': 'https://www.getninjas.com.br/reformas-e-reparos'},
+                                    {'sitelink_text': 'Aqui é mais daora',
+                                     'sitelink_final_url': 'https://www.getninjas.com.br/reformas-e-reparos/encanadores'}
+                                    ],
+        'campaign_id': 1062350534,
+    })
+
+    client.insert({
+        'object_type': 'campaign_structured_snippet',
+        'client_id': 3709730243,
+        'snippets_configuration': [{
+            'header': 'Serviços',
+            'values': ['Construção','Manutenção','Conserto'],
+        }],
+        'campaign_id': 1062350534
+    })
+
+    client.execute_operations(sync=True)
+    get_internal_operation = {'object_type': 'campaign_structured_snippet',
+          'client_id': 3709730243
+          }
+    client.get_entities(get_internal_operation)
+
+
 def test_client():
     _delete_campaigns()
     _create_campaign()
