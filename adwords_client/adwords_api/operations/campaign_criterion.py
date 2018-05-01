@@ -8,15 +8,12 @@ def ad_schedule_operation(campaign_id: 'Long' = None,
                     operator: 'String' = 'ADD',
                     **kwargs):
     operation = {
-        # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation
         'xsi_type': 'CampaignCriterionOperation',
         'operator': operator.upper(),
         'operand': {
-            # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterion
             'xsi_type': 'CampaignCriterion',
             'campaignId': campaign_id,
             'criterion': {
-                # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.Language
                 'xsi_type': 'AdSchedule',
                 'dayOfWeek': day_of_week,
                 'startHour': start_hour,

@@ -276,7 +276,6 @@ class AdWords:
         self.flush_files()
 
     def _get_service_from_object_type(self, internal_operation):
-
         object_type_service_mapper = {
             'managed_customer': 'ManagedCustomerService',
             'customer': 'CustomerService',
@@ -316,50 +315,37 @@ class AdWords:
         previous_service_name = None
         operation_builder = OperationsBuilder()
         results = []
-        adwords_operations = []
+        adw_ops = []
         for internal_operation in self._read_buffer():
             client_id = internal_operation['client_id']
             service_name = self._get_service_from_object_type(internal_operation)
             for adwords_operation in operation_builder(internal_operation):
-                if previous_client_id is None or service_name is None:
-                    adwords_operations.append(adwords_operation)
-                    previous_client_id = client_id
-                    previous_service_name = service_name
-                elif client_id != previous_client_id or service_name != previous_service_name:
-                    service = self.service(previous_service_name)
-                    label_operations = [adwords_operation for adwords_operation in adwords_operations if 'labelId' in adwords_operation['operand']]
-                    regular_operations = [adwords_operation for adwords_operation in adwords_operations if 'labelId' not in adwords_operation['operand']]
-
-                    if len(label_operations) > 0:
-                        results.append(service.cs_mutate_labels(previous_client_id, label_operations))
-                    if len(regular_operations) > 0:
-                        results.append(service.cs_mutate(previous_client_id, regular_operations))
-                    label_operations = []
-                    regular_operations = []
-                    adwords_operations = [adwords_operation]
-                    previous_client_id = client_id
-                    previous_service_name = service_name
-                else:
-                    adwords_operations.append(adwords_operation)
-                    previous_client_id = client_id
-                    previous_service_name = service_name
+                if client_id != previous_client_id or service_name != previous_service_name:
+                    if previous_client_id is not None and service_name is not None:
+                        service = self.service(previous_service_name)
+                        label_operations = [adw_op for adw_op in adw_ops if 'labelId' in adw_op['operand']]
+                        regular_operations = [adw_op for adw_op in adw_ops if 'labelId' not in adw_op['operand']]
+                        if label_operations:
+                            results.append(service.custom_mutate_labels(previous_client_id, label_operations))
+                        if regular_operations:
+                            results.append(service.custom_mutate(previous_client_id, regular_operations))
+                        label_operations = []
+                        regular_operations = []
+                        adw_ops = []
+                adw_ops.append(adwords_operation)
+                previous_client_id = client_id
+                previous_service_name = service_name
 
         service = self.service(previous_service_name)
-        label_operations = [adwords_operation for adwords_operation in adwords_operations if
-                            'labelId' in adwords_operation['operand']]
-        regular_operations = [adwords_operation for adwords_operation in adwords_operations if
-                              'labelId' not in adwords_operation['operand']]
-        if len(label_operations) > 0:
-            results.append(service.cs_mutate_labels(previous_client_id, label_operations))
-        if len(regular_operations) > 0:
-            results.append(service.cs_mutate(previous_client_id, regular_operations))
+        label_operations = [adw_op for adw_op in adw_ops if 'labelId' in adw_op['operand']]
+        regular_operations = [adw_op for adw_op in adw_ops if 'labelId' not in adw_op['operand']]
+        if label_operations:
+            results.append(service.custom_mutate_labels(previous_client_id, label_operations))
+        if regular_operations:
+            results.append(service.custom_mutate(previous_client_id, regular_operations))
 
         self._operations_buffer = None
-        # maybe clean buffer?
-        # raise NotImplementedError()
         return results
-        # must get, maybe process, and return results
-        # raise NotImplementedError()
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
@@ -373,7 +359,6 @@ class AdWords:
         """
         if sync:
             return self._sync_operations()
-            # call self._sync_operations straight away or use map_function?
         else:
             if not operations_folder:
                 raise ValueError('Async operations must have an operation folder defined.')
@@ -391,8 +376,9 @@ class AdWords:
     def get_entities(self, get_internal_operation):
         try:
             service_name = self._get_service_from_object_type(get_internal_operation)
-            service = self.service(service_name)
-            results = service.cs_get(get_internal_operation)
-            return [result for result in results]
         except KeyError:
             logger.debug('There is no custom service class for this object_type: %s', str(get_internal_operation['object_type']))
+            raise
+        service = self.service(service_name)
+        results = service.custom_get(get_internal_operation)
+        return list(results)

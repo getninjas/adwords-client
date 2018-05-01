@@ -24,7 +24,6 @@ def budget_order_operation(budget_order_id: 'Long' = None,
                 {
                     'microAmount': spending_limit
                 }
-
         }
     }
 

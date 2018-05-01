@@ -122,7 +122,7 @@ def _sync_operations():
         'object_type': 'campaign_sitelink',
         'client_id': 3709730243,
         'sitelinks_configuration': [{'sitelink_text': 'Aqui é mais barato',
-                                                  'sitelink_final_url': 'https://www.getninjas.com.br/'},
+                                     'sitelink_final_url': 'https://www.getninjas.com.br/'},
                                     {'sitelink_text': 'Aqui é mais legal',
                                      'sitelink_final_url': 'https://www.getninjas.com.br/reformas-e-reparos'},
                                     {'sitelink_text': 'Aqui é mais daora',
@@ -143,8 +143,8 @@ def _sync_operations():
 
     client.execute_operations(sync=True)
     get_internal_operation = {'object_type': 'campaign_structured_snippet',
-          'client_id': 3709730243
-          }
+                              'client_id': 3709730243
+                              }
     client.get_entities(get_internal_operation)
 
 

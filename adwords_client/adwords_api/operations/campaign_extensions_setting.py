@@ -51,6 +51,7 @@ def callout_setting_for_campaign_operation(campaign_id: 'Long' = None,
         })
     return operation
 
+
 def structured_snippet_setting_for_campaign_operation(campaign_id: 'Long' = None,
                                                snippets_configuration: 'String[]' = None,
                                                operator: 'String' = 'ADD',

@@ -7,20 +7,12 @@ class CustomerService(cm.BaseService):
     def __init__(self, client):
         super().__init__(client, 'CustomerService')
 
-    def get_customers(self):
-        return self.service.getCustomers()
-
-    def update_customer(self, customer):
-        self.prepare_mutate()
-        self.helper.add_operation(customer)
-        return self.mutate(customer.customerId)
-
-    def cs_mutate(self, customer_id, operations):
+    def custom_mutate(self, customer_id, operations):
         if len(operations) > 1:
             raise Exception('Only one customer operation is supported per time')
         else:
             operation = operations[0]
-            customers = self.cs_get(operation)
+            customers = self.custom_get(operation)
             if len(customers) > 0:
                 customer = customers[0]
                 if 'tracking_url_template' in operation:
@@ -34,15 +26,10 @@ class CustomerService(cm.BaseService):
             else:
                 raise Exception('No customers with this Id')
 
-    def cs_get(self, internal_operation):
-        client_id = None
-        if 'client_id' in internal_operation:
-            client_id = internal_operation['client_id']
-        if internal_operation['object_type'] == 'customer':
-            if client_id is not None:
-                self.client.SetClientCustomerId(client_id)
-            return self.service.getCustomers()
-        else:
+    def custom_get(self, internal_operation):
+        client_id = internal_operation.get('client_id')
+        if internal_operation['object_type'] != 'customer':
             raise NotImplementedError()
-
-
+        if client_id:
+            self.client.SetClientCustomerId(client_id)
+        return self.service.getCustomers()

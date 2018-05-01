@@ -5,12 +5,7 @@ class CampaignCriterionService(cm.BaseService):
     def __init__(self, client):
         super().__init__(client, 'CampaignCriterionService')
 
-    def cs_mutate(self, customer_id, operations):
-        self.prepare_mutate()
-        self.helper.add_operations(operations)
-        return self.mutate(customer_id)
-
-    def cs_get(self, internal_operation):
+    def custom_get(self, internal_operation):
         fields = ['CampaignId']
         predicate = []
         if internal_operation['object_type'] == 'campaign_ad_schedule':
@@ -28,14 +23,10 @@ class CampaignCriterionService(cm.BaseService):
                 'field': 'CriteriaType', 'operator': 'EQUALS', 'values': 'LANGUAGE'
             })
             fields.extend(['LanguageName', 'BidModifier', 'Id'])
-        client_id = None
         self.prepare_get()
-        if 'client_id' in internal_operation:
-            client_id = internal_operation['client_id']
-        if 'predicate' in internal_operation:
-            predicate.extend(internal_operation['predicate'])
-        if 'fields' in internal_operation:
-            [fields.append(field) for field in internal_operation['fields'] if field not in fields]
+        client_id = internal_operation.get('client_id')
+        predicate.extend(internal_operation.get('predicate', []))
+        fields = set(fields).union(internal_operation.get('fields', []))
         for predicate_item in predicate:
             self.helper.add_predicate(predicate_item['field'], predicate_item['operator'], predicate_item['values'])
         self.helper.add_fields(*fields)

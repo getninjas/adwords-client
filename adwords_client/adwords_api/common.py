@@ -121,6 +121,16 @@ class BaseService:
             self.client.SetClientCustomerId(client_customer_id)
         return self.ResultProcessor(self.service.mutateLabel, self.helper.operations)
 
+    def custom_mutate(self, customer_id, operations):
+        self.prepare_mutate()
+        self.helper.add_operations(operations)
+        return self.mutate(customer_id)
+
+    def custom_mutate_labels(self, customer_id, operations):
+        self.prepare_mutate()
+        self.helper.add_operations(operations)
+        return self.mutate_labels(customer_id)
+
 
 class Selector:
     def __init__(self):

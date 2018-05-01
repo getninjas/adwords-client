@@ -1,6 +1,8 @@
 import logging
 from .mappers import cast_to_adwords
-from ..adwords_api.operations import campaign, adgroup, keyword, ad, label, campaign_shared_set, shared_criterion, shared_set, managed_customer, budget_order, attach_label, campaign_extensions_setting, campaign_criterion
+from ..adwords_api.operations import (campaign, adgroup, keyword, ad, label, campaign_shared_set, shared_criterion,
+                                      shared_set, managed_customer, budget_order, attach_label,
+                                      campaign_extensions_setting, campaign_criterion)
 
 logger = logging.getLogger(__name__)
 

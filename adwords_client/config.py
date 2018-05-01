@@ -6,7 +6,7 @@ FIELDS = {
     'client_customer_id': None,
     'client_id': None,
     'client_secret': None,
-    'refresh_token': None
+    'refresh_token': None,
 }
 
 
