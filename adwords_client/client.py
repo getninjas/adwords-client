@@ -309,6 +309,7 @@ class AdWords:
             return object_type_service_mapper.get(internal_operation['object_type'])
         except KeyError:
             logger.debug('There is no custom service class for this object_type: %s', str(internal_operation['object_type']))
+            raise
 
     def _sync_operations(self):
         previous_client_id = None
@@ -374,11 +375,7 @@ class AdWords:
         return {account['name']: account for account in mcs.get_customers(client_id)}
 
     def get_entities(self, get_internal_operation):
-        try:
-            service_name = self._get_service_from_object_type(get_internal_operation)
-        except KeyError:
-            logger.debug('There is no custom service class for this object_type: %s', str(get_internal_operation['object_type']))
-            raise
+        service_name = self._get_service_from_object_type(get_internal_operation)
         service = self.service(service_name)
         results = service.custom_get(get_internal_operation)
         return list(results)
