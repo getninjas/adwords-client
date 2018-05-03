@@ -93,7 +93,7 @@ class AdWords:
 
     def flush_files(self):
         while self._open_files:
-            file = self._open_files.pop()
+            _, file = self._open_files.popitem()
             file.flush()
             file.close()
 
