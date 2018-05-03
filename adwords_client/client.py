@@ -96,7 +96,7 @@ class AdWords:
             file.flush()
 
     def _write_entry(self, file_name, entry):
-        self.get_file(file_name).write(json.dumps(entry) + '\n')
+        self.get_file(file_name, mode='w+').write(json.dumps(entry) + '\n')
 
     def _read_entries(self, file_name):
         file = self.get_file(file_name, mode='r')
