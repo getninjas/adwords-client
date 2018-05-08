@@ -154,8 +154,9 @@ def test_client():
     _adjust_bids()
     _get_keywords_report()
     _delete_campaigns()
+    _sync_operations()
 
 
-# def test_get_accounts():
-#     client = AdWords(workdir='./tests/generated_files')
-#     client.get_accounts()
+def test_get_accounts():
+    client = AdWords(workdir='./tests/generated_files')
+    client.get_accounts()
