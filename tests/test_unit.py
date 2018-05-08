@@ -122,11 +122,11 @@ def _sync_operations():
         'object_type': 'campaign_sitelink',
         'client_id': 3709730243,
         'sitelinks_configuration': [{'sitelink_text': 'Aqui é mais barato',
-                                     'sitelink_final_url': 'https://www.getninjas.com.br/'},
+                                     'sitelink_final_url': 'https://www.mywebsite.com.br/'},
                                     {'sitelink_text': 'Aqui é mais legal',
-                                     'sitelink_final_url': 'https://www.getninjas.com.br/reformas-e-reparos'},
+                                     'sitelink_final_url': 'https://www.mywebsite.com.br/reformas-e-reparos'},
                                     {'sitelink_text': 'Aqui é mais daora',
-                                     'sitelink_final_url': 'https://www.getninjas.com.br/reformas-e-reparos/encanadores'}
+                                     'sitelink_final_url': 'https://www.mywebsite.com.br/reformas-e-reparos/encanadores'}
                                     ],
         'campaign_id': 1062350534,
     })
@@ -156,6 +156,6 @@ def test_client():
     _delete_campaigns()
 
 
-def test_get_accounts():
-    client = AdWords(workdir='./tests/generated_files')
-    client.get_accounts()
+# def test_get_accounts():
+#     client = AdWords(workdir='./tests/generated_files')
+#     client.get_accounts()
