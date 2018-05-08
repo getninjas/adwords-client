@@ -1,4 +1,5 @@
 import logging
+from .utils import _get_selector
 
 logger = logging.getLogger(__name__)
 
@@ -17,3 +18,8 @@ def new_label_operation(label: 'String'= None,
             'name': label
         }
     }
+
+
+def get_label_operation(fields=[], predicates=[],  **kwargs):
+    fields = set(fields).union({'LabelId', 'LabelName'})
+    return _get_selector(fields, predicates)

@@ -1,5 +1,6 @@
+from .utils import _get_selector
 
-#ltalvez colocar os atributos de keywords dentro de kwards?
+
 def shared_criterion_operation(shared_criterion_id: 'Long' = None,
                                shared_set_id: 'Long' = None,
                                operator: 'String' = 'ADD',
@@ -9,8 +10,10 @@ def shared_criterion_operation(shared_criterion_id: 'Long' = None,
                                keyword_text: 'String' = None,
                                **kwargs):
     operation = {
+        'xsi_type': 'SharedCriterionOperation',
         'operator': operator.upper(),
         'operand': {
+            'xsi_type': 'SharedCriterion',
             'negative': is_negative,
             'criterion': {},
             'sharedSetId': shared_set_id
@@ -25,3 +28,8 @@ def shared_criterion_operation(shared_criterion_id: 'Long' = None,
             'matchType': match_type
         }
     return operation
+
+
+def get_shared_criterion_operation(fields=[], predicates=[], **kwargs):
+    fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)

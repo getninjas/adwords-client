@@ -1,3 +1,4 @@
+from .utils import _build_new_bidding_strategy_configuration, _build_money, _get_selector
 
 
 def sitelink_setting_for_campaign_operation(campaign_id: 'Long' = None,
@@ -76,3 +77,14 @@ def structured_snippet_setting_for_campaign_operation(campaign_id: 'Long' = None
         })
 
     return operation
+
+
+def get_campaign_extension_operation(object_type=None, fields=[], predicates=[], **kwargs):
+    fields = set(fields).union({'CampaignId', 'Extensions'})
+    if object_type == 'campaign_sitelink':
+        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'SITELINK'})
+    if object_type == 'campaign_callout':
+        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'CALLOUT'})
+    if object_type == 'campaign_structured_snippet':
+        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'STRUCTURED_SNIPPET'})
+    return _get_selector(fields, predicates)

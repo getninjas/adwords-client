@@ -1,3 +1,5 @@
+from .utils import _get_selector
+
 def adgroup_operation(campaign_id: 'Long' = None,
                       adgroup_id: 'Long' = None,
                       adgroup_name: 'String' = None,
@@ -34,3 +36,8 @@ def ad_group_label_operation(operator: 'String' = 'ADD',
         }
     }
     return operation
+
+
+def get_ad_group_operation(fields=[], predicates=[]):
+    fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)

@@ -87,7 +87,7 @@ class BatchJobService(cm.BaseService):
         except IndexError:
             raise RuntimeError('No operations queued. No "whole operation" id created')
 
-    def prepare_mutate(self):
+    def prepare_mutate(self, sync=None):
         self.helper = BatchJobOperations(self.service)
         self.ResultProcessor = cm.SimpleReturnValue
 

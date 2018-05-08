@@ -56,100 +56,152 @@ class OperationsBuilder:
     def filter_operation(self, operation):
         return {k: v for k, v in operation.items() if v is not None}
 
-    def _parse_operation(self, operation):
+    def _parse_operation(self, operation, is_get_operation=False, sync=None):
         if self.valid_operation(operation):
-            object_type = operation.pop('object_type')
+            object_type = operation.get('object_type')
             operation = self.filter_operation(self.cast_operation(operation))
             if object_type == 'keyword':
-                yield from self._parse_keyword(operation)
+                yield from self._parse_keyword(operation, is_get_operation)
             elif object_type == 'adgroup':
-                yield from self._parse_adgroup(operation)
+                yield from self._parse_adgroup(operation, is_get_operation)
             elif object_type == 'ad':
-                yield from self._parse_ad(operation)
+                yield from self._parse_ad(operation, is_get_operation)
             elif object_type == 'campaign':
-                yield from self._parse_campaign(operation)
+                yield from self._parse_campaign(operation, is_get_operation)
             elif object_type == 'label':
-                yield from self._parse_label(operation)
-            elif object_type == 'managed_customer':
-                yield from self._parse_managed_customer(operation)
+                yield from self._parse_label(operation, is_get_operation)
+            elif object_type == 'managed_customer' and sync:
+                yield from self._parse_managed_customer(operation, is_get_operation)
             elif object_type == 'customer':
-                yield from self._parse_customer(operation)
+                yield from self._parse_customer(operation, is_get_operation)
             elif object_type == 'shared_criterion':
-                yield from self._parse_shared_criterion(operation)
+                yield from self._parse_shared_criterion(operation, is_get_operation)
             elif object_type == 'campaign_shared_set':
-                yield from self._parse_campaign_shared_set(operation)
+                yield from self._parse_campaign_shared_set(operation, is_get_operation)
             elif object_type == 'shared_set':
-                yield from self._parse_shared_set(operation)
-            elif object_type == 'budget_order':
-                yield from self._parse_budget_order(operation)
-            elif object_type == 'attach_label':
-                yield from self._parse_attach_label(operation)
+                yield from self._parse_shared_set(operation, is_get_operation)
+            elif object_type == 'budget_order' and sync:
+                yield from self._parse_budget_order(operation, is_get_operation)
+            elif object_type == 'attach_label' and sync:
+                yield from self._parse_attach_label(operation, is_get_operation)
             elif object_type == 'campaign_sitelink':
-                yield from self._parse_sitelinks_setting_for_campaign(operation)
+                yield from self._parse_sitelinks_setting_for_campaign(operation, is_get_operation)
             elif object_type == 'campaign_structured_snippet':
-                yield from self._parse_structured_snippets_setting_for_campaign(operation)
+                yield from self._parse_structured_snippets_setting_for_campaign(operation, is_get_operation)
             elif object_type == 'campaign_callout':
-                yield from self._parse_callouts_setting_for_campaign(operation)
-            elif object_type == 'campaign_ad_schedule':
-                yield from self._parse_ad_schedule_for_campaign(operation)
+                yield from self._parse_callouts_setting_for_campaign(operation, is_get_operation)
+            elif object_type in ['campaign_ad_schedule', 'campaign_targeted_location', 'campaign_language']:
+                yield from self._parse_campaign_criterion_operation(operation, is_get_operation)
+            elif object_type == 'billing_account' and sync:
+                yield {}
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
 
-    def _parse_ad_schedule_for_campaign(self, operation):
-        yield campaign_criterion.ad_schedule_operation(**operation)
+    def _parse_campaign_criterion_operation(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign_criterion.get_campaign_criterion_operation(**operation)
+        elif operation['object_type'] == 'campaign_ad_schedule':
+            yield campaign_criterion.ad_schedule_operation(**operation)
+        else:
+            raise NotImplementedError()
 
-    def _parse_callouts_setting_for_campaign(self, operation):
-        yield campaign_extensions_setting.callout_setting_for_campaign_operation(**operation)
+    def _parse_callouts_setting_for_campaign(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign_extensions_setting.get_campaign_extension_operation(**operation)
+        else:
+            yield campaign_extensions_setting.callout_setting_for_campaign_operation(**operation)
 
-    def _parse_structured_snippets_setting_for_campaign(self, operation):
-        yield campaign_extensions_setting.structured_snippet_setting_for_campaign_operation(**operation)
+    def _parse_structured_snippets_setting_for_campaign(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign_extensions_setting.get_campaign_extension_operation(**operation)
+        else:
+            yield campaign_extensions_setting.structured_snippet_setting_for_campaign_operation(**operation)
 
-    def _parse_sitelinks_setting_for_campaign(self, operation):
-        yield campaign_extensions_setting.sitelink_setting_for_campaign_operation(**operation)
+    def _parse_sitelinks_setting_for_campaign(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign_extensions_setting.get_campaign_extension_operation(**operation)
+        else:
+            yield campaign_extensions_setting.sitelink_setting_for_campaign_operation(**operation)
 
-    def _parse_attach_label(self, operation):
-        yield attach_label.attach_label_operation(**operation)
+    def _parse_attach_label(self, operation, is_get_operation):
+        if is_get_operation:
+            raise Exception('There is not get method for this object type')
+        else:
+            yield attach_label.attach_label_operation(**operation)
 
-    def _parse_shared_set(self, operation):
-        yield shared_set.shared_set_operation(**operation)
+    def _parse_shared_set(self, operation, is_get_operation):
+        if is_get_operation:
+            yield shared_set.get_shared_set_operation(operation)
+        else:
+            yield shared_set.shared_set_operation(**operation)
 
-    def _parse_campaign_shared_set(self, operation):
-        yield campaign_shared_set.campaign_shared_set_operation(**operation)
+    def _parse_campaign_shared_set(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign_shared_set.get_campaign_shared_set(**operation)
+        else:
+            yield campaign_shared_set.campaign_shared_set_operation(**operation)
 
-    def _parse_shared_criterion(self, operation):
-        yield shared_criterion.shared_criterion_operation(**operation)
+    def _parse_shared_criterion(self, operation, is_get_operation):
+        if is_get_operation:
+            yield shared_criterion.get_shared_criterion_operation(**operation)
+        else:
+            yield shared_criterion.shared_criterion_operation(**operation)
 
-    def _parse_managed_customer(self, operation):
-        yield managed_customer.managed_customer_operation(**operation)
+    def _parse_managed_customer(self, operation, is_get_operation):
+        if is_get_operation:
+            yield managed_customer.get_managed_customer_operation(**operation)
+        else:
+            yield managed_customer.managed_customer_operation(**operation)
 
-    def _parse_customer(self, operation):
-        operation['object_type'] = 'customer'
+    def _parse_customer(self, operation, is_get_operation):
+        if is_get_operation:
+            operation = {}
+        else:
+            operation['object_type'] = 'customer'
         yield operation
 
-    def _parse_budget_order(self, operation):
-        yield budget_order.budget_order_operation(**operation)
+    def _parse_budget_order(self, operation, is_get_operation):
+        if is_get_operation:
+            yield budget_order.get_budget_order_operation(**operation)
+        else:
+            yield budget_order.budget_order_operation(**operation)
 
-    def _parse_keyword(self, operation):
-        yield keyword.new_keyword_operation(**operation)
+    def _parse_keyword(self, operation, is_get_operation):
+        if is_get_operation:
+            keyword.get_keyword_operation(**operation)
+        else:
+            yield keyword.new_keyword_operation(**operation)
 
-    def _parse_adgroup(self, operation):
-        yield adgroup.adgroup_operation(**operation)
+    def _parse_adgroup(self, operation, is_get_operation):
+        if is_get_operation:
+            yield adgroup.get_ad_group_operation(**operation)
+        else:
+            yield adgroup.adgroup_operation(**operation)
 
-    def _parse_ad(self, operation):
-        yield ad.expanded_ad_operation(**operation)
+    def _parse_ad(self, operation, is_get_operation):
+        if is_get_operation:
+            yield ad.get_ad_operation(**operation)
+        else:
+            yield ad.expanded_ad_operation(**operation)
 
-    def _parse_campaign(self, operation):
-        if operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation:
-            operation['budget_id'] = cast_to_adwords('budget_id', self.get_next_id())
-            yield campaign.add_budget(**operation)
-        yield campaign.campaign_operation(**operation)
-        for language_id in operation.get('languages', []):
-            language_id = cast_to_adwords('language_id', language_id)
-            yield campaign.add_campaign_language(language_id=language_id, **operation)
-        for location_id in operation.get('locations', []):
-            location_id = cast_to_adwords('location_id', location_id)
-            yield campaign.add_campaign_location(location_id=location_id, **operation)
+    def _parse_campaign(self, operation, is_get_operation):
+        if is_get_operation:
+            yield campaign.get_campaign_operation(operation)
+        else:
+            if operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation:
+                operation['budget_id'] = cast_to_adwords('budget_id', self.get_next_id())
+                yield campaign.add_budget(**operation)
+            yield campaign.campaign_operation(**operation)
+            for language_id in operation.get('languages', []):
+                language_id = cast_to_adwords('language_id', language_id)
+                yield campaign.add_campaign_language(language_id=language_id, **operation)
+            for location_id in operation.get('locations', []):
+                location_id = cast_to_adwords('location_id', location_id)
+                yield campaign.add_campaign_location(location_id=location_id, **operation)
 
-    def _parse_label(self, operation):
-        yield label.new_label_operation(**operation)
+    def _parse_label(self, operation, is_get_operation):
+        if is_get_operation:
+            yield label.get_label_operation(**operation)
+        else:
+            yield label.new_label_operation(**operation)

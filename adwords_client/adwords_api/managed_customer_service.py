@@ -5,22 +5,14 @@ class ManagedCustomerService(cm.BaseService):
     def __init__(self, client):
         super().__init__(client, 'ManagedCustomerService')
 
-    def get_customers(self, client_customer_id=None, predicate=None):
-        self.prepare_get()
-        self.helper.add_fields('CustomerId', 'Name')
-        if predicate:
-            for predicate_item in predicate:
-                self.helper.add_predicate(predicate_item['field'], predicate_item['operator'], predicate_item['values'])
-        client_id = client_customer_id if client_customer_id else self.client.client_customer_id
-        for customer in self.get(client_id):
-            yield customer
+    #Samuel, vc ainda usa isso?
 
-    def custom_get(self, internal_operation):
-        fields = ['CustomerId', 'Name']
-        self.prepare_get()
-        client_id = internal_operation.get('client_id')
-        for predicate_item in internal_operation.get('predicate', []):
-            self.helper.add_predicate(predicate_item['field'], predicate_item['operator'], predicate_item['values'])
-        fields = set(fields).union(internal_operation.get('fields', []))
-        self.helper.add_fields(*fields)
-        return self.get(client_id)
+    # def get_customers(self, client_customer_id=None, predicate=None):
+    #     self.prepare_get()
+    #     self.helper.add_fields('CustomerId', 'Name')
+    #     if predicate:
+    #         for predicate_item in predicate:
+    #             self.helper.add_predicate(predicate_item['field'], predicate_item['operator'], predicate_item['values'])
+    #     client_id = client_customer_id if client_customer_id else self.client.client_customer_id
+    #     for customer in self.get(client_id):
+    #         yield customer

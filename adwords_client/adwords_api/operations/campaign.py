@@ -1,4 +1,4 @@
-from .utils import _build_new_bidding_strategy_configuration, _build_money
+from .utils import _build_new_bidding_strategy_configuration, _build_money, _get_selector
 
 
 def campaign_operation(campaign_id: 'Long' = None,
@@ -109,3 +109,8 @@ def add_budget(budget: 'Money' = None,
         operation['operand']['isExplicitlyShared'] = False
 
     return operation
+
+
+def get_campaign_operation(fields=[], predicates=[], **kwargs):
+    fields = set(fields).union({'Id', 'Name'})
+    return _get_selector(fields, predicates)

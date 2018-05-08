@@ -1,3 +1,4 @@
+from .utils import _get_selector
 
 
 def budget_order_operation(budget_order_id: 'Long' = None,
@@ -34,3 +35,11 @@ def budget_order_operation(budget_order_id: 'Long' = None,
     if budget_order_name:
         operation['operand']['budgetOrderName'] = budget_order_name
     return operation
+
+
+def get_budget_order_operation(object_type, fields=[], predicates=[], **kwargs):
+    if object_type == 'billing_account':
+        return {}
+    else:
+        fields = set(fields).union({'Id', 'Name'})
+        return _get_selector(fields, predicates)

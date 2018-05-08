@@ -3,16 +3,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class CustomerService(cm.BaseService):
     def __init__(self, client):
         super().__init__(client, 'CustomerService')
 
-    def custom_mutate(self, customer_id, operations):
-        if len(operations) > 1:
+    def mutate(self, client_customer_id=None, sync=None):
+        if len(self.helper.operations) > 1:
             raise Exception('Only one customer operation is supported per time')
         else:
-            operation = operations[0]
-            customers = self.custom_get(operation)
+            operation = self.helper.operations[0]
+            customers = self.get(operation={}, client_id=client_customer_id)
             if len(customers) > 0:
                 customer = customers[0]
                 if 'tracking_url_template' in operation:
@@ -22,14 +23,13 @@ class CustomerService(cm.BaseService):
                 if 'final_url_suffix' in operation:
                     customer.finalUrlSuffix = operation['final_url_suffix']
                 customer.__values__.pop('parallelTrackingEnabled')
-                return self.service.mutate(customer)
+                result = self.service.mutate(customer)
+                result['returnType'] = 'Customer'
+                return [result]
             else:
                 raise Exception('No customers with this Id')
 
-    def custom_get(self, internal_operation):
-        client_id = internal_operation.get('client_id')
-        if internal_operation['object_type'] != 'customer':
-            raise NotImplementedError()
+    def get(self, operation, client_id=None):
         if client_id:
             self.client.SetClientCustomerId(client_id)
         return self.service.getCustomers()

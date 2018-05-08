@@ -82,8 +82,8 @@ class AdWords:
 
     def service(self, service_name):
         if service_name not in self.services:
-            self.services[service_name] = getattr(adwords_api, service_name)
-        return self.services[service_name](self.client)
+            self.services[service_name] = getattr(adwords_api, service_name)(self.client)
+        return self.services[service_name]
 
     def get_file(self, name, *args, **kwargs):
         if name not in self._open_files:
@@ -316,34 +316,28 @@ class AdWords:
         previous_service_name = None
         operation_builder = OperationsBuilder()
         results = []
-        adw_ops = []
         for internal_operation in self._read_buffer():
             client_id = internal_operation['client_id']
             service_name = self._get_service_from_object_type(internal_operation)
             for adwords_operation in operation_builder(internal_operation):
-                if client_id != previous_client_id or service_name != previous_service_name:
-                    if previous_client_id is not None and service_name is not None:
-                        service = self.service(previous_service_name)
-                        label_operations = [adw_op for adw_op in adw_ops if 'labelId' in adw_op['operand']]
-                        regular_operations = [adw_op for adw_op in adw_ops if 'labelId' not in adw_op['operand']]
-                        if label_operations:
-                            results.append(service.custom_mutate_labels(previous_client_id, label_operations))
-                        if regular_operations:
-                            results.append(service.custom_mutate(previous_client_id, regular_operations))
-                        label_operations = []
-                        regular_operations = []
-                        adw_ops = []
-                adw_ops.append(adwords_operation)
+                service = self.service(service_name)
+                if previous_client_id is not None:
+                    previous_service = self.service(previous_service_name)
+                    if client_id != previous_client_id or service_name != previous_service_name:
+                        # time to upload
+                        results.extend(previous_service.mutate(previous_client_id, sync=True))
+                        # prepare for next upload
+                        service.prepare_mutate(sync=True)
+                else:
+                    # this runs on the first loop
+                    service.prepare_mutate(sync=True)
+
+                service.helper.add_operation(adwords_operation)
                 previous_client_id = client_id
                 previous_service_name = service_name
-
-        service = self.service(previous_service_name)
-        label_operations = [adw_op for adw_op in adw_ops if 'labelId' in adw_op['operand']]
-        regular_operations = [adw_op for adw_op in adw_ops if 'labelId' not in adw_op['operand']]
-        if label_operations:
-            results.append(service.custom_mutate_labels(previous_client_id, label_operations))
-        if regular_operations:
-            results.append(service.custom_mutate(previous_client_id, regular_operations))
+        if previous_service_name and previous_client_id:
+            previous_service = self.service(previous_service_name)
+            results.extend(previous_service.mutate(previous_client_id, sync=True))
 
         self._operations_buffer = None
         return results
@@ -375,7 +369,12 @@ class AdWords:
         return {account['name']: account for account in mcs.get_customers(client_id)}
 
     def get_entities(self, get_internal_operation):
+        operation_builder = OperationsBuilder()
         service_name = self._get_service_from_object_type(get_internal_operation)
         service = self.service(service_name)
-        results = service.custom_get(get_internal_operation)
+        client_id = get_internal_operation.get('client_id', None)
+        service.prepare_get()
+        results = service.get(operation_builder(get_internal_operation, is_get_operation=True), client_id)
+        if type(results) is list:
+            return results
         return list(results)

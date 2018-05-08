@@ -1,3 +1,5 @@
+from .utils import _get_selector
+
 def expanded_ad_operation(adgroup_id: 'Long' = None,
                           ad_id: 'Long' = None,
                           status: 'String' = 'PAUSED',
@@ -120,3 +122,8 @@ def ad_label_operation(ad_id: 'Long' = None,
         }
     }
     return operation
+
+
+def get_ad_operation(fields=[], predicates=[]):
+    fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)

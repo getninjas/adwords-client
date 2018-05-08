@@ -56,6 +56,28 @@ class BaseResult:
                 yield entry
 
 
+class SyncReturnValue(BaseResult):
+    def __init__(self, callback, parameters):
+        super().__init__(callback, parameters)
+        label_operations = [adw_op for adw_op in parameters if 'labelId' in adw_op['operand']]
+        regular_operations = [adw_op for adw_op in parameters if 'labelId' not in adw_op['operand']]
+        results = []
+        if label_operations:
+            partial_results = callback.mutateLabel(label_operations)
+            results.append(partial_results)
+        if regular_operations:
+            partial_results = callback.mutate(regular_operations)
+            results.append(partial_results)
+        self.result = results
+
+    def __iter__(self):
+        for item in self.result:
+            item_type = item['ListReturnValue.Type']
+            for entry in item.value:
+                entry['returnType'] = item_type
+                yield entry
+
+
 class SimpleReturnValue(BaseResult):
     def __init__(self, callback, parameters):
         super().__init__(callback, parameters)
@@ -97,39 +119,30 @@ class BaseService:
             self._service = self.client.GetService(self.service_name, version=API_VERSION)
         return self._service
 
-    # Default selector for get, should be overwritten if necessary.
-    def prepare_get(self):
-        self.helper = Selector()
+    # # Default selector for get, should be overwritten if necessary.
+    def prepare_get(self, sync=None):
+        if sync is None:
+            self.helper = Selector()
         self.ResultProcessor = PagedResult
 
-    def prepare_mutate(self):
+    def prepare_mutate(self, sync=None):
         self.helper = SyncServiceHelper(self)
-        self.ResultProcessor = SimpleReturnValue
+        if sync:
+            self.ResultProcessor = SyncReturnValue
+        else:
+            self.ResultProcessor = SimpleReturnValue
 
-    def get(self, client_customer_id=None):
+    def get(self, operation, client_id=None):
+        if client_id:
+            self.client.SetClientCustomerId(client_id)
+        return self.ResultProcessor(self.service.get, next(operation))
+
+    def mutate(self, client_customer_id=None, sync=None):
         if client_customer_id:
             self.client.SetClientCustomerId(client_customer_id)
-        return self.ResultProcessor(self.service.get, self.helper.selector)
-
-    def mutate(self, client_customer_id=None):
-        if client_customer_id:
-            self.client.SetClientCustomerId(client_customer_id)
+        if sync:
+            return self.ResultProcessor(self.service, self.helper.operations)
         return self.ResultProcessor(self.service.mutate, self.helper.operations)
-
-    def mutate_labels(self, client_customer_id=None):
-        if client_customer_id:
-            self.client.SetClientCustomerId(client_customer_id)
-        return self.ResultProcessor(self.service.mutateLabel, self.helper.operations)
-
-    def custom_mutate(self, customer_id, operations):
-        self.prepare_mutate()
-        self.helper.add_operations(operations)
-        return self.mutate(customer_id)
-
-    def custom_mutate_labels(self, customer_id, operations):
-        self.prepare_mutate()
-        self.helper.add_operations(operations)
-        return self.mutate_labels(customer_id)
 
 
 class Selector:
@@ -170,5 +183,5 @@ class SyncServiceHelper:
         self.service = service
         self.operations = []
 
-    def add_operations(self, operations):
-        self.operations.extend(operations)
+    def add_operation(self, operation):
+        self.operations.append(operation)

@@ -1,3 +1,4 @@
+from .utils import _get_selector
 
 
 def managed_customer_operation(client_id: 'Long' = None,
@@ -32,3 +33,8 @@ def managed_customer_label_operation(client_id: 'Long' = None,
         }
     }
     return operation
+
+
+def get_managed_customer_operation(fields=[], predicates=[], **kwargs):
+    fields = set(fields).union({'CustomerId', 'Name'})
+    return _get_selector(fields, predicates)
