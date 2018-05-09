@@ -151,12 +151,13 @@ def _sync_operations():
     client.execute_operations(sync=True)
 
 
-_delete_campaigns()
-_create_campaign()
-_adjust_bids()
-_get_keywords_report()
-_delete_campaigns()
-_sync_operations()
+def test_client():
+    _delete_campaigns()
+    _create_campaign()
+    _adjust_bids()
+    _get_keywords_report()
+    _delete_campaigns()
+    _sync_operations()
 
 
 def test_get_accounts():
