@@ -112,49 +112,51 @@ def _adjust_bids():
 
 def _sync_operations():
     client = AdWords()
-    client.insert({'object_type': 'campaign_callout',
-              'client_id': 3709730243,
-              'callout_text_list': ['Clique aqui','Somos Legais','Contrate aqui'],
-              'campaign_id': 1341876198
-              })
 
     client.insert({
-        'object_type': 'campaign_sitelink',
-        'client_id': 3709730243,
-        'sitelinks_configuration': [{'sitelink_text': 'Aqui é mais barato',
-                                     'sitelink_final_url': 'https://www.mywebsite.com.br/'},
-                                    {'sitelink_text': 'Aqui é mais legal',
-                                     'sitelink_final_url': 'https://www.mywebsite.com.br/reformas-e-reparos'},
-                                    {'sitelink_text': 'Aqui é mais daora',
-                                     'sitelink_final_url': 'https://www.mywebsite.com.br/reformas-e-reparos/encanadores'}
-                                    ],
-        'campaign_id': 1062350534,
-    })
-
-    client.insert({
-        'object_type': 'campaign_structured_snippet',
-        'client_id': 3709730243,
-        'snippets_configuration': [{
-            'header': 'Serviços',
-            'values': ['Construção','Manutenção','Conserto'],
-        }],
-        'campaign_id': 1062350534
+        'object_type': 'shared_set',
+        'client_id': 7857288943,
+        'shared_set_name': 'API Sync Test',
+        'shared_set_type': 'NEGATIVE_KEYWORDS',
     })
 
     client.execute_operations(sync=True)
-    get_internal_operation = {'object_type': 'campaign_structured_snippet',
-                              'client_id': 3709730243
-                              }
-    client.get_entities(get_internal_operation)
+
+    get_internal_operation = {
+        'object_type': 'shared_set',
+        'client_id': 7857288943,
+        'fields': ['Name', 'SharedSetId', 'Type', 'Status'],
+        'predicates': [{
+            'field': 'Name',
+            'operator': 'EQUALS',
+            'values': ['API Sync Test']
+        }, {
+            'field': 'Status',
+            'operator': 'EQUALS',
+            'values': ['ENABLED']
+        },
+        ]
+    }
+
+    shared_sets = client.get_entities(get_internal_operation)
+
+    for shared_set in shared_sets:
+        client.insert({
+            'object_type': 'shared_set',
+            'client_id': 7857288943,
+            'shared_set_id': shared_set['sharedSetId'],
+            'operator': 'REMOVE'
+        })
+
+    client.execute_operations(sync=True)
 
 
-def test_client():
-    _delete_campaigns()
-    _create_campaign()
-    _adjust_bids()
-    _get_keywords_report()
-    _delete_campaigns()
-    _sync_operations()
+_delete_campaigns()
+_create_campaign()
+_adjust_bids()
+_get_keywords_report()
+_delete_campaigns()
+_sync_operations()
 
 
 def test_get_accounts():

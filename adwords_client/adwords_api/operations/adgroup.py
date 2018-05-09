@@ -1,5 +1,6 @@
 from .utils import _get_selector
 
+
 def adgroup_operation(campaign_id: 'Long' = None,
                       adgroup_id: 'Long' = None,
                       adgroup_name: 'String' = None,

@@ -19,6 +19,7 @@ def shared_criterion_operation(shared_criterion_id: 'Long' = None,
             'sharedSetId': shared_set_id
         }
     }
+
     if shared_criterion_id:
         operation['operand']['criterion']['id'] = shared_criterion_id
     if criterion_type == 'Keyword':

@@ -362,6 +362,7 @@ class AdWords:
             files = [[path.join(operations_folder, file)] for file in files]
             self._client = None
             self._operations_buffer = None
+            self.services = {}
             self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):

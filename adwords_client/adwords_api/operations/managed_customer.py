@@ -10,11 +10,12 @@ def managed_customer_operation(client_id: 'Long' = None,
     operation = {
         'operator': operator.upper(),
         'operand': {
-            'name': name,
             'currencyCode': currency_code,
             'dateTimeZone': date_time_zone,
         }
     }
+    if name:
+        operation['operand']['name'] = name
     if client_id:
         operation['operand']['customerId'] = client_id
         operation['operator'] = 'SET'

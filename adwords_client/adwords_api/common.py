@@ -140,7 +140,8 @@ class BaseService:
     def sync_get(self, operation, client_id=None):
         if client_id:
             self.client.SetClientCustomerId(client_id)
-        return self.ResultProcessor(self.service.get, next(operation))
+        op = next(operation)
+        return self.ResultProcessor(self.service.get, op)
 
     def mutate(self, client_customer_id=None, sync=None):
         if client_customer_id:

@@ -66,7 +66,7 @@ class OperationsBuilder:
                 yield from self._parse_adgroup(operation, is_get_operation)
             elif object_type == 'ad':
                 yield from self._parse_ad(operation, is_get_operation)
-            elif object_type == 'campaign':
+            elif object_type == 'campaign' and sync is None:
                 yield from self._parse_campaign(operation, is_get_operation)
             elif object_type == 'label':
                 yield from self._parse_label(operation, is_get_operation)
@@ -132,7 +132,7 @@ class OperationsBuilder:
 
     def _parse_shared_set(self, operation, is_get_operation):
         if is_get_operation:
-            yield shared_set.get_shared_set_operation(operation)
+            yield shared_set.get_shared_set_operation(**operation)
         else:
             yield shared_set.shared_set_operation(**operation)
 
@@ -187,7 +187,7 @@ class OperationsBuilder:
 
     def _parse_campaign(self, operation, is_get_operation):
         if is_get_operation:
-            yield campaign.get_campaign_operation(operation)
+            yield campaign.get_campaign_operation(**operation)
         else:
             if operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation:
                 operation['budget_id'] = cast_to_adwords('budget_id', self.get_next_id())
