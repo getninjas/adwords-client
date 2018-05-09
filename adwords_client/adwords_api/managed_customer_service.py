@@ -6,6 +6,7 @@ class ManagedCustomerService(cm.BaseService):
         super().__init__(client, 'ManagedCustomerService')
 
     def get_customers(self, client_customer_id=None, predicate=None):
+        # Replace this to use a builder and the new opeartion representation
         self.prepare_get()
         self.helper.add_fields('CustomerId', 'Name')
         if predicate:

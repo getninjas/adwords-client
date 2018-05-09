@@ -138,6 +138,18 @@ def _sync_operations():
         ]
     }
 
+    # Test example
+    # get_internal_operation = {
+    #     'object_type': 'shared_set',
+    #     'client_id': 7857288943,
+    #     'fields': ['Name', 'SharedSetId', 'Type', 'Status'],
+    #     'predicates': [
+    #         ('Name', 'EQUALS', 'API Sync Test'),
+    #         ('Status', 'IN', ['ENABLED', 'DISABLED']),
+    #     ]
+    # }
+    # assert builder(get_internal_operation) == { ... }
+
     shared_sets = client.get_entities(get_internal_operation)
 
     for shared_set in shared_sets:

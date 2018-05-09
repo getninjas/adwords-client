@@ -114,6 +114,16 @@ class BatchJobService(cm.BaseService):
         return
 
     def get_status(self, batch_job_id, client_customer_id=None):
+        # Usage proposal
+        # op = {
+        #     'object_type': 'batch_job',
+        #     'client_id': 7857288943,
+        #     'fields': ['DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status'],
+        #     'predicates': [('Id', 'EQUALS', [batch_job_id])]
+        # }
+        # adw_op = builder(op)
+        # self.get(adw_op, client_customer_id)
+
         self.prepare_get()
         self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
         self.helper.add_predicate('Id', 'EQUALS', [batch_job_id])

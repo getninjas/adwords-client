@@ -137,6 +137,7 @@ class BaseService:
             self.client.SetClientCustomerId(client_customer_id)
         return self.ResultProcessor(self.service.get, self.helper.selector)
 
+    # this should replace the get() method above
     def sync_get(self, operation, client_id=None):
         if client_id:
             self.client.SetClientCustomerId(client_id)
