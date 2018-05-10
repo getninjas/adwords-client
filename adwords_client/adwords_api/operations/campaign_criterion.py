@@ -31,19 +31,21 @@ def ad_schedule_operation(campaign_id: 'Long' = None,
     return operation
 
 
-def get_campaign_criterion_operation(fields=[], predicates=[], **kwargs):
+def get_campaign_criterion_operation(fields: 'list'=None, predicates: 'list'=None, **kwargs):
+    predicates = predicates or []
+    fields = set(fields or [])
     default_fields = kwargs.pop('default_fields', False)
     object_type = kwargs.pop('object_type', None)
     if object_type == 'campaign_ad_schedule':
         predicates.append(('CriteriaType','EQUALS','AD_SCHEDULE'))
         if default_fields:
-            fields = set(fields).union({'DayOfWeek', 'StartHour', 'StartMinute', 'EndHour', 'EndMinute', 'BidModifier'})
+            fields.update({'DayOfWeek', 'StartHour', 'StartMinute', 'EndHour', 'EndMinute', 'BidModifier'})
     elif object_type == 'campaign_targeted_location':
         predicates.append(('CriteriaType','EQUALS', 'LOCATION'))
         if default_fields:
-            fields = set(fields).union({'LocationName', 'BidModifier', 'Id'})
+            fields.update({'LocationName', 'BidModifier', 'Id'})
     elif object_type == 'campaign_language':
         predicates.append(('CriteriaType','EQUALS', 'LANGUAGE'))
         if default_fields:
-            fields = set(fields).union({'LanguageName', 'BidModifier', 'Id'})
+            fields.update({'LanguageName', 'BidModifier', 'Id'})
     return _get_selector(fields, predicates)

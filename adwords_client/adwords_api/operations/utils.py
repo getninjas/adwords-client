@@ -47,7 +47,8 @@ def get_batch_job_operation(fields=[], predicates=[], **kwargs):
     return _get_selector(fields, predicates)
 
 
-def _get_selector(fields, predicates=None, ordering=None):
+def _get_selector(fields, predicates:'list'=None, ordering=None):
+    predicates = predicates or []
 
     selector = {
         'xsi_type': 'Selector',
@@ -58,12 +59,10 @@ def _get_selector(fields, predicates=None, ordering=None):
             # https://developers.google.com/adwords/api/docs/appendix/limits#general
             'numberResults': 10000,
         },
-        'fields': [],
+        'fields': list(fields),
         'predicates': [],
         'ordering': [],
     }
-
-    selector['fields'].extend(fields)
 
     for field, operator, values in predicates:
         if isinstance(values, str) or isinstance(values, int) or isinstance(values, float):

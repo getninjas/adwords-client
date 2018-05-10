@@ -137,7 +137,7 @@ class BaseService:
         if operation:
             operation = operation[0]
         else:
-            raise Exception('The operation object is empty')
+            raise RuntimeError('The operation object is empty')
         return self.ResultProcessor(self.service.get, operation)
 
     def mutate(self, client_customer_id=None, sync=None):

@@ -383,6 +383,4 @@ class AdWords:
         client_id = get_internal_operation.get('client_id', None)
         service.prepare_get()
         results = service.get(operation_builder(get_internal_operation), client_id)
-        if type(results) is list:
-            return results
         return list(results)

@@ -66,7 +66,7 @@ class OperationsBuilder:
                 yield from self._parse_adgroup(operation)
             elif object_type == 'ad':
                 yield from self._parse_ad(operation)
-            elif object_type == 'campaign' and sync is None:
+            elif object_type == 'campaign' and not sync:
                 yield from self._parse_campaign(operation)
             elif object_type == 'label':
                 yield from self._parse_label(operation)
@@ -134,7 +134,7 @@ class OperationsBuilder:
 
     def _parse_attach_label(self, operation):
         if 'fields' in operation or 'default_fields' in operation:
-            raise Exception('There is not get method for this object type')
+            raise TypeError('There is not get method for this object type')
         else:
             yield attach_label.attach_label_operation(**operation)
 

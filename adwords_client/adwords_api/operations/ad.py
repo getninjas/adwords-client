@@ -129,3 +129,4 @@ def get_ad_operation(fields=[], predicates=[], **kwargs):
     if default_fields:
         fields = set(fields).union({'Id'})
     return _get_selector(fields, predicates)
+

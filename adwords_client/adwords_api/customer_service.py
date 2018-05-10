@@ -10,11 +10,11 @@ class CustomerService(cm.BaseService):
 
     def mutate(self, client_customer_id=None, sync=None):
         if len(self.helper.operations) > 1:
-            raise Exception('Only one customer operation is supported per time')
+            raise RuntimeError('Only one customer operation is supported per time')
         else:
             operation = self.helper.operations[0]
             customers = self.sync_get(operation={}, client_id=client_customer_id)
-            if len(customers) > 0:
+            if customers:
                 customer = customers[0]
                 if 'tracking_url_template' in operation:
                     customer.trackingUrlTemplate = operation['tracking_url_template']
@@ -22,6 +22,7 @@ class CustomerService(cm.BaseService):
                     customer.autoTaggingEnabled = operation['auto_tagging_enabled']
                 if 'final_url_suffix' in operation:
                     customer.finalUrlSuffix = operation['final_url_suffix']
+                # can't delete field through method delattr
                 customer.__values__.pop('parallelTrackingEnabled')
                 result = self.service.mutate(customer)
                 result['returnType'] = 'Customer'
