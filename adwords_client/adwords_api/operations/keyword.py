@@ -41,6 +41,8 @@ def new_keyword_operation(adgroup_id: 'Long' = None,
     return operation
 
 
-def get_keyword_operation(fields=[], predicates=[]):
-    fields = set(fields).union({'Id'})
+def get_keyword_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
     return _get_selector(fields, predicates)

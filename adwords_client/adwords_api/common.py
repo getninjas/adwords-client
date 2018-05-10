@@ -120,9 +120,7 @@ class BaseService:
         return self._service
 
     # # Default selector for get, should be overwritten if necessary.
-    def prepare_get(self, sync=None):
-        if sync is None:
-            self.helper = Selector()
+    def prepare_get(self):
         self.ResultProcessor = PagedResult
 
     def prepare_mutate(self, sync=None):
@@ -132,17 +130,15 @@ class BaseService:
         else:
             self.ResultProcessor = SimpleReturnValue
 
-    def get(self, client_customer_id=None):
-        if client_customer_id:
-            self.client.SetClientCustomerId(client_customer_id)
-        return self.ResultProcessor(self.service.get, self.helper.selector)
-
-    # this should replace the get() method above
-    def sync_get(self, operation, client_id=None):
+    def get(self, operation, client_id=None):
         if client_id:
             self.client.SetClientCustomerId(client_id)
-        op = next(operation)
-        return self.ResultProcessor(self.service.get, op)
+        operation = list(operation)
+        if operation:
+            operation = operation[0]
+        else:
+            raise Exception('The operation object is empty')
+        return self.ResultProcessor(self.service.get, operation)
 
     def mutate(self, client_customer_id=None, sync=None):
         if client_customer_id:

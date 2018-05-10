@@ -37,9 +37,11 @@ def budget_order_operation(budget_order_id: 'Long' = None,
     return operation
 
 
-def get_budget_order_operation(object_type, fields=[], predicates=[], **kwargs):
+def get_budget_order_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    object_type = kwargs.pop('object_type', None)
     if object_type == 'billing_account':
         return {}
-    else:
-        fields = set(fields).union({'Id', 'Name'})
-        return _get_selector(fields, predicates)
+    if default_fields:
+        fields = set(fields).union({'Id', 'BudgetOrderName'})
+    return _get_selector(fields, predicates)

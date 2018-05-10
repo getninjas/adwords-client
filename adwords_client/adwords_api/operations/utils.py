@@ -40,6 +40,13 @@ def batch_job_operation(operator, id_=None, status=None):
     return operation
 
 
+def get_batch_job_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id', 'DownloadUrl'})
+    return _get_selector(fields, predicates)
+
+
 def _get_selector(fields, predicates=None, ordering=None):
 
     selector = {
@@ -58,12 +65,14 @@ def _get_selector(fields, predicates=None, ordering=None):
 
     selector['fields'].extend(fields)
 
-    for predicate in predicates:
+    for field, operator, values in predicates:
+        if isinstance(values, str) or isinstance(values, int) or isinstance(values, float):
+            values = [values]
         predicate = {
             'xsi_type': 'Predicate',
-            'field': predicate['field'],
-            'operator': predicate['operator'],
-            'values': predicate['values'],
+            'field': field,
+            'operator': operator,
+            'values': values,
         }
         selector['predicates'].append(predicate)
 

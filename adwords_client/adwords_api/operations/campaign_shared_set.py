@@ -19,5 +19,7 @@ def campaign_shared_set_operation(shared_set_id: 'Long' = None,
 
 
 def get_campaign_shared_set(fields=[], predicates=[],  **kwargs):
-    fields = set(fields).union({'SharedSetId', 'SharedSetName'})
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'SharedSetId', 'SharedSetName'})
     return _get_selector(fields, predicates)

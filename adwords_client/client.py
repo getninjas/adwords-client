@@ -366,8 +366,15 @@ class AdWords:
             self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):
+        operation_builder = OperationsBuilder()
+        internal_operation = {
+            'object_type': 'managed_customer',
+            'fields': ['Name', 'CustomerId']
+        }
         mcs = self.service('ManagedCustomerService')
-        return {account['name']: account for account in mcs.get_customers(client_id)}
+        mcs.prepare_get()
+        return {account['name']: account for account in
+                mcs.get(operation_builder(internal_operation, sync=True), client_id)}
 
     def get_entities(self, get_internal_operation):
         operation_builder = OperationsBuilder()
@@ -375,7 +382,7 @@ class AdWords:
         service = self.service(service_name)
         client_id = get_internal_operation.get('client_id', None)
         service.prepare_get()
-        results = service.sync_get(operation_builder(get_internal_operation, is_get_operation=True), client_id)
+        results = service.get(operation_builder(get_internal_operation), client_id)
         if type(results) is list:
             return results
         return list(results)

@@ -112,5 +112,7 @@ def add_budget(budget: 'Money' = None,
 
 
 def get_campaign_operation(fields=[], predicates=[], **kwargs):
-    fields = set(fields).union({'Id', 'Name'})
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id', 'Name'})
     return _get_selector(fields, predicates)

@@ -21,5 +21,7 @@ def new_label_operation(label: 'String'= None,
 
 
 def get_label_operation(fields=[], predicates=[],  **kwargs):
-    fields = set(fields).union({'LabelId', 'LabelName'})
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'LabelId', 'LabelName'})
     return _get_selector(fields, predicates)

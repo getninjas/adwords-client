@@ -79,12 +79,15 @@ def structured_snippet_setting_for_campaign_operation(campaign_id: 'Long' = None
     return operation
 
 
-def get_campaign_extension_operation(object_type=None, fields=[], predicates=[], **kwargs):
-    fields = set(fields).union({'CampaignId', 'Extensions'})
+def get_campaign_extension_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    object_type = kwargs.pop('object_type', None)
+    if default_fields:
+        fields = set(fields).union({'CampaignId', 'Extensions'})
     if object_type == 'campaign_sitelink':
-        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'SITELINK'})
+        predicates.append(('ExtensionType', 'EQUALS', 'SITELINK'))
     if object_type == 'campaign_callout':
-        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'CALLOUT'})
+        predicates.append(('ExtensionType', 'EQUALS', 'CALLOUT'))
     if object_type == 'campaign_structured_snippet':
-        predicates.append({'field': 'ExtensionType', 'operator': 'EQUALS', 'values': 'STRUCTURED_SNIPPET'})
+        predicates.append(('ExtensionType', 'EQUALS', 'STRUCTURED_SNIPPET'))
     return _get_selector(fields, predicates)

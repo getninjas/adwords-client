@@ -124,6 +124,8 @@ def ad_label_operation(ad_id: 'Long' = None,
     return operation
 
 
-def get_ad_operation(fields=[], predicates=[]):
-    fields = set(fields).union({'Id'})
+def get_ad_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
     return _get_selector(fields, predicates)

@@ -32,5 +32,7 @@ def shared_criterion_operation(shared_criterion_id: 'Long' = None,
 
 
 def get_shared_criterion_operation(fields=[], predicates=[], **kwargs):
-    fields = set(fields).union({'Id'})
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
     return _get_selector(fields, predicates)

@@ -1,0 +1,4 @@
+{"campaign_id": -1, "object_type": "campaign", "budget": 1000, "campaign_name": "API test campaign", "locations": [1001773, 1001768], "languages": [1014, 1000], "client_id": 7857288943}
+{"campaign_id": -1, "adgroup_name": "API test adgroup", "object_type": "adgroup", "client_id": 7857288943, "adgroup_id": -2}
+{"campaign_id": -1, "object_type": "keyword", "cpc_bid": 13.37, "text": "my search term", "adgroup_id": -2, "client_id": 7857288943, "status": "paused", "keyword_match_type": "broad"}
+{"final_urls": "http://www.mytest.com/", "campaign_id": -1, "object_type": "ad", "description": "This is my test ad", "headline_part_2": "my pretty test", "adgroup_id": -2, "path_2": "ad", "headline_part_1": "Ad test", "path_1": "test", "final_mobile_urls": "http://m.mytest.com/", "client_id": 7857288943}

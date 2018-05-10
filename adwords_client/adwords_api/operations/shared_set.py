@@ -27,5 +27,7 @@ def shared_set_operation(shared_set_id: 'Long' = None,
 
 
 def get_shared_set_operation(fields=[], predicates=[], **kwargs):
-    fields = set(fields).union({'SharedSetId', 'Name'})
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'SharedSetId', 'Name'})
     return _get_selector(fields, predicates)
