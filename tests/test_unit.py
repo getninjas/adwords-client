@@ -990,18 +990,34 @@ def test_build_adwords_operations():
 	_build_campaign_ad_schedule_operations()
 
 
-def test_client():
+# def test_client():
+# 	_delete_campaigns()
+# 	_create_campaign()
+# 	_adjust_bids()
+# 	_get_keywords_report()
+# 	_delete_campaigns()
+# 	_sync_operations()
+
+def test_delete_campaigns():
 	_delete_campaigns()
+
+
+def test_create_campaign():
 	_create_campaign()
+
+
+def test_adjust_bids():
 	_adjust_bids()
+
+
+def get_keywords_report():
 	_get_keywords_report()
-	_delete_campaigns()
+
+
+def test_sync_operations():
 	_sync_operations()
 
 
 def test_get_accounts():
 	client = AdWords(workdir='./tests/generated_files')
 	client.get_accounts()
-
-test_build_adwords_operations()
-test_client()
