@@ -2,7 +2,7 @@ from .utils import _get_selector
 
 
 def managed_customer_operation(client_id: 'Long' = None,
-                               name: 'String' = None,
+                               c: 'String' = None,
                                currency_code: 'String' = None,
                                operator: 'String' = 'ADD',
                                date_time_zone: 'String' = None,

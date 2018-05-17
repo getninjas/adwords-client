@@ -82,7 +82,7 @@ class OperationsBuilder:
                 yield from self._parse_shared_set(operation)
             elif object_type == 'budget_order' and sync:
                 yield from self._parse_budget_order(operation)
-            elif object_type == 'attach_label' and sync:
+            elif object_type == 'attach_label':
                 yield from self._parse_attach_label(operation)
             elif object_type == 'campaign_sitelink':
                 yield from self._parse_sitelinks_setting_for_campaign(operation)
