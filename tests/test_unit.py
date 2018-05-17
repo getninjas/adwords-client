@@ -972,6 +972,7 @@ def _build_operations_with_default_fields():
 	expected_get_adwords_operation['fields'] = sorted(expected_get_adwords_operation['fields'])
 	assert expected_get_adwords_operation == get_adwords_operation
 
+
 def test_build_adwords_operations():
 	_build_shared_set_operations()
 	_build_budget_order_operations()
@@ -1001,3 +1002,5 @@ def test_client():
 def test_get_accounts():
 	client = AdWords(workdir='./tests/generated_files')
 	client.get_accounts()
+
+test_client()
