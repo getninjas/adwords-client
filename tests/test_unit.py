@@ -1003,4 +1003,5 @@ def test_get_accounts():
 	client = AdWords(workdir='./tests/generated_files')
 	client.get_accounts()
 
+test_build_adwords_operations()
 test_client()
