@@ -24,10 +24,9 @@ def _delete_campaigns():
 			'status': 'REMOVED',
 		}
 		client.insert(entry)
-	if new_report_df:
-		operations_folder = client.split()
-		client.execute_operations(operations_folder)
-		client.wait_jobs(operations_folder)
+	operations_folder = client.split()
+	client.execute_operations(operations_folder)
+	client.wait_jobs(operations_folder)
 
 
 def _create_campaign():
@@ -1000,8 +999,10 @@ def test_build_adwords_operations():
 # 	_sync_operations()
 
 
-def test_delete_campaigns():
-	_delete_campaigns()
+
+# def test_delete_campaigns():
+# 	_delete_campaigns()
+
 
 def test_create_campaign():
 	_create_campaign()
