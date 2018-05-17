@@ -68,5 +68,4 @@ local/
 scratch.py
 *.env
 *.sqlite
-tests/tests/generated_files
 tests/generated_files

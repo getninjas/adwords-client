@@ -6,10 +6,9 @@ class BudgetOrderService(cm.BaseService):
         super().__init__(client, 'BudgetOrderService')
 
     def get(self, operation, client_id=None):
-        if client_id:
-            self.client.SetClientCustomerId(client_id)
-        op = next(operation)
-        if op == {}:
+        ops = list(operation)
+        op = ops[0]
+        if not op:
             return self.service.getBillingAccounts()
-        self.ResultProcessor = cm.PagedResult
-        return self.ResultProcessor(self.service.get, op)
+        return super().get([op], client_id)
+
