@@ -66,8 +66,8 @@ class OperationsBuilder:
                 yield from self._parse_adgroup(operation)
             elif object_type == 'ad':
                 yield from self._parse_ad(operation)
-            elif object_type == 'campaign' and not sync:
-                yield from self._parse_campaign(operation)
+            elif object_type == 'campaign':
+                yield from self._parse_campaign(operation, sync)
             elif object_type == 'label':
                 yield from self._parse_label(operation)
             elif object_type == 'managed_customer' and sync:
@@ -193,10 +193,10 @@ class OperationsBuilder:
         else:
             yield ad.expanded_ad_operation(**operation)
 
-    def _parse_campaign(self, operation):
+    def _parse_campaign(self, operation, sync=None):
         if 'fields' in operation or 'default_fields' in operation:
             yield campaign.get_campaign_operation(**operation)
-        else:
+        elif sync is None:
             if operation.get('operator', 'ADD').upper() == 'ADD' and 'budget_id' not in operation:
                 operation['budget_id'] = cast_to_adwords('budget_id', self.get_next_id())
                 yield campaign.add_budget(**operation)
@@ -207,6 +207,8 @@ class OperationsBuilder:
             for location_id in operation.get('locations', []):
                 location_id = cast_to_adwords('location_id', location_id)
                 yield campaign.add_campaign_location(location_id=location_id, **operation)
+        else:
+            raise RuntimeError('Sync mutate operation ĩs not supported')
 
     def _parse_label(self, operation):
         if 'fields' in operation or 'default_fields' in operation:

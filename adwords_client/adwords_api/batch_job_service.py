@@ -124,7 +124,6 @@ class BatchJobService(cm.BaseService):
         }
         adwords_operation_builder = OperationsBuilder()
         adwords_operation = adwords_operation_builder(internal_operation)
-        self.prepare_get()
         self.get(adwords_operation, client_customer_id)
 
         # self.prepare_get()
@@ -145,7 +144,6 @@ class BatchJobService(cm.BaseService):
 
             adwords_operation_builder = OperationsBuilder()
             adwords_operation = adwords_operation_builder(internal_operation)
-            self.prepare_get()
             result[client_id] = list(self.get(adwords_operation))
             # self.prepare_get()
             # self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')

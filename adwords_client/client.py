@@ -372,7 +372,6 @@ class AdWords:
             'fields': ['Name', 'CustomerId']
         }
         mcs = self.service('ManagedCustomerService')
-        mcs.prepare_get()
         return {account['name']: account for account in
                 mcs.get(operation_builder(internal_operation, sync=True), client_id)}
 
@@ -381,6 +380,5 @@ class AdWords:
         service_name = self._get_service_from_object_type(get_internal_operation)
         service = self.service(service_name)
         client_id = get_internal_operation.get('client_id', None)
-        service.prepare_get()
-        results = service.get(operation_builder(get_internal_operation), client_id)
+        results = service.get(operation_builder(get_internal_operation, sync=True), client_id)
         return list(results)

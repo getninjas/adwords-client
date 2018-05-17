@@ -119,10 +119,6 @@ class BaseService:
             self._service = self.client.GetService(self.service_name, version=API_VERSION)
         return self._service
 
-    # # Default selector for get, should be overwritten if necessary.
-    def prepare_get(self):
-        self.ResultProcessor = PagedResult
-
     def prepare_mutate(self, sync=None):
         self.helper = SyncServiceHelper(self)
         if sync:
@@ -131,6 +127,7 @@ class BaseService:
             self.ResultProcessor = SimpleReturnValue
 
     def get(self, operation, client_id=None):
+        self.ResultProcessor = PagedResult
         if client_id:
             self.client.SetClientCustomerId(client_id)
         operation = list(operation)
