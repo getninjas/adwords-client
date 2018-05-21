@@ -124,12 +124,8 @@ class BatchJobService(cm.BaseService):
         }
         adwords_operation_builder = OperationsBuilder()
         adwords_operation = adwords_operation_builder(internal_operation)
-        self.get(adwords_operation, client_customer_id)
 
-        # self.prepare_get()
-        # self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
-        # self.helper.add_predicate('Id', 'EQUALS', [batch_job_id])
-        return next(iter(self.get(client_customer_id)))
+        return next(iter(self.get(adwords_operation, client_customer_id)))
 
     def get_multiple_status(self, jobs):
         result = {}
@@ -144,10 +140,6 @@ class BatchJobService(cm.BaseService):
 
             adwords_operation_builder = OperationsBuilder()
             adwords_operation = adwords_operation_builder(internal_operation)
-            result[client_id] = list(self.get(adwords_operation))
-            # self.prepare_get()
-            # self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
-            # self.helper.add_predicate('Id', 'IN', [job for job in jobs[client_id]])
-            # result[client_id] = list(self.get(client_id))
+            result[client_id] = list(self.get(adwords_operation, client_id))
         logger.info('BatchJob Statuses:\n%s', result)
         return result

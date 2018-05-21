@@ -379,7 +379,6 @@ class AdWords:
         operation_builder = OperationsBuilder()
         service_name = self._get_service_from_object_type(get_internal_operation)
         service = self.service(service_name)
-        service.prepare_get()
         client_id = get_internal_operation.get('client_id', None)
         results = service.get(operation_builder(get_internal_operation, sync=True), client_id)
         return list(results)
