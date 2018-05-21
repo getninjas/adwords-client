@@ -5,6 +5,7 @@ import googleads
 
 from . import common as cm
 from adwords_client.adwords_api.operations.utils import batch_job_operation
+from adwords_client.internal_api.builder import OperationsBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class BatchJobService(cm.BaseService):
         except IndexError:
             raise RuntimeError('No operations queued. No "whole operation" id created')
 
-    def prepare_mutate(self):
+    def prepare_mutate(self, sync=None):
         self.helper = BatchJobOperations(self.service)
         self.ResultProcessor = cm.SimpleReturnValue
 
@@ -114,17 +115,31 @@ class BatchJobService(cm.BaseService):
         return
 
     def get_status(self, batch_job_id, client_customer_id=None):
-        self.prepare_get()
-        self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
-        self.helper.add_predicate('Id', 'EQUALS', [batch_job_id])
-        return next(iter(self.get(client_customer_id)))
+
+        internal_operation = {
+            'object_type': 'batch_job',
+            'client_id': 7857288943,
+            'fields': ['DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status'],
+            'predicates': [('Id', 'EQUALS', [batch_job_id])]
+        }
+        adwords_operation_builder = OperationsBuilder()
+        adwords_operation = adwords_operation_builder(internal_operation)
+
+        return next(iter(self.get(adwords_operation, client_customer_id)))
 
     def get_multiple_status(self, jobs):
         result = {}
         for client_id in jobs:
-            self.prepare_get()
-            self.helper.add_fields('DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status')
-            self.helper.add_predicate('Id', 'IN', [job for job in jobs[client_id]])
-            result[client_id] = list(self.get(client_id))
+
+            internal_operation = {
+                'object_type': 'batch_job',
+                'client_id': 7857288943,
+                'fields': ['DownloadUrl', 'Id', 'ProcessingErrors', 'ProgressStats', 'Status'],
+                'predicates': [('Id', 'IN', [job for job in jobs[client_id]])]
+            }
+
+            adwords_operation_builder = OperationsBuilder()
+            adwords_operation = adwords_operation_builder(internal_operation)
+            result[client_id] = list(self.get(adwords_operation, client_id))
         logger.info('BatchJob Statuses:\n%s', result)
         return result

@@ -17,7 +17,6 @@ import googleads.adwords
 
 from . import adwords_api, config, storages, utils
 from .adwords_api import common
-from .adwords_api.managed_customer_service import ManagedCustomerService
 from .internal_api.builder import OperationsBuilder
 from .internal_api.mappers import MAPPERS
 
@@ -83,8 +82,8 @@ class AdWords:
 
     def service(self, service_name):
         if service_name not in self.services:
-            self.services[service_name] = getattr(adwords_api, service_name)
-        return self.services[service_name](self.client)
+            self.services[service_name] = getattr(adwords_api, service_name)(self.client)
+        return self.services[service_name]
 
     def get_file(self, name, *args, **kwargs):
         if name not in self._open_files:
@@ -276,10 +275,76 @@ class AdWords:
             bjs.helper.upload_operations(is_last=True)
         self.flush_files()
 
+    def _get_service_from_object_type(self, internal_operation):
+        object_type_service_mapper = {
+            'managed_customer': 'ManagedCustomerService',
+            'customer': 'CustomerService',
+            'shared_criterion': 'SharedCriterionService',
+            'campaign_shared_set': 'CampaignSharedSetService',
+            'shared_set': 'SharedSetService',
+            'budget_order': 'BudgetOrderService',
+            'campaign': 'CampaignService',
+            'billing_account': 'BudgetOrderService',
+            'label': 'LabelService',
+            'campaign_ad_schedule': 'CampaignCriterionService',
+            'campaign_targeted_location': 'CampaignCriterionService',
+            'campaign_sitelink': 'CampaignExtensionSettingService',
+            'campaign_callout': 'CampaignExtensionSettingService',
+            'campaign_structured_snippet': 'CampaignExtensionSettingService',
+            'account_label': 'AccountLabelService',
+            'campaign_language': 'CampaignCriterionService'
+        }
+
+        if internal_operation['object_type'] == 'attach_label':
+            if 'ad_id' in internal_operation:
+                raise NotImplementedError()
+            elif 'adgroup_id' in internal_operation:
+                raise NotImplementedError()
+            elif 'campaign_id' in internal_operation:
+                return object_type_service_mapper.get('campaign')
+            elif 'customer_id' in internal_operation:
+                return object_type_service_mapper.get('managed_customer')
+
+        try:
+            return object_type_service_mapper.get(internal_operation['object_type'])
+        except KeyError:
+            logger.debug('There is no custom service class for this object_type: %s', str(internal_operation['object_type']))
+            raise
+
+    def _sync_operations(self):
+        previous_client_id = None
+        previous_service_name = None
+        operation_builder = OperationsBuilder()
+        results = []
+        for internal_operation in self._read_buffer():
+            client_id = internal_operation['client_id']
+            service_name = self._get_service_from_object_type(internal_operation)
+            for adwords_operation in operation_builder(internal_operation):
+                service = self.service(service_name)
+                if previous_client_id is not None:
+                    previous_service = self.service(previous_service_name)
+                    if client_id != previous_client_id or service_name != previous_service_name:
+                        # time to upload
+                        results.extend(previous_service.mutate(previous_client_id, sync=True))
+                        # prepare for next upload
+                        service.prepare_mutate(sync=True)
+                else:
+                    # this runs on the first loop
+                    service.prepare_mutate(sync=True)
+
+                service.helper.add_operation(adwords_operation)
+                previous_client_id = client_id
+                previous_service_name = service_name
+        if previous_service_name and previous_client_id:
+            previous_service = self.service(previous_service_name)
+            results.extend(previous_service.mutate(previous_client_id, sync=True))
+
+        self._operations_buffer = None
+        return results
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def execute_operations(self, operations_folder):
+    def execute_operations(self, operations_folder=None, sync=False):
         """
         Possible columns in the table:
 
@@ -287,13 +352,33 @@ class AdWords:
         :param batchlog_table:
         :return:
         """
-        logger.info('Running %s...', inspect.stack()[0][3])
-        _, files = self.storage.listdir(operations_folder)
-        files = [[path.join(operations_folder, file)] for file in files]
-        self._client = None
-        self._operations_buffer = None
-        self.map_function(self._batch_operations, files)
+        if sync:
+            return self._sync_operations()
+        else:
+            if not operations_folder:
+                raise ValueError('Async operations must have an operation folder defined.')
+            logger.info('Running %s...', inspect.stack()[0][3])
+            _, files = self.storage.listdir(operations_folder)
+            files = [[path.join(operations_folder, file)] for file in files]
+            self._client = None
+            self._operations_buffer = None
+            self.services = {}
+            self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):
-        mcs = ManagedCustomerService(self.client)
-        return {account['name']: account for account in mcs.get_customers(client_id)}
+        operation_builder = OperationsBuilder()
+        internal_operation = {
+            'object_type': 'managed_customer',
+            'fields': ['Name', 'CustomerId']
+        }
+        mcs = self.service('ManagedCustomerService')
+        return {account['name']: account for account in
+                mcs.get(operation_builder(internal_operation, sync=True), client_id)}
+
+    def get_entities(self, get_internal_operation):
+        operation_builder = OperationsBuilder()
+        service_name = self._get_service_from_object_type(get_internal_operation)
+        service = self.service(service_name)
+        client_id = get_internal_operation.get('client_id', None)
+        results = service.get(operation_builder(get_internal_operation, sync=True), client_id)
+        return list(results)

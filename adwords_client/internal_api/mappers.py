@@ -50,6 +50,9 @@ def cast_int(x):
     return int(x)
 
 
+def process_array_of_str(x):
+    return [str(item) for item in x]
+
 class AdwordsMapper:
     def __init__(self, converter=noop, adapter=noop):
         self.converter = converter
@@ -80,6 +83,7 @@ MAPPERS = {
     'Integer': AdwordsMapper(process_integer, cast_int),
     'String': AdwordsMapper(str, str),
     'Identity': AdwordsMapper(noop, noop),
+    'String[]': AdwordsMapper(process_array_of_str, process_array_of_str),
 }
 
 FIELD_MAP = {
