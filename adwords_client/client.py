@@ -91,11 +91,13 @@ class AdWords:
         return self._open_files[name]
 
     def flush_files(self):
-        for file in self._open_files.values():
+        while self._open_files:
+            _, file = self._open_files.popitem()
             file.flush()
+            file.close()
 
     def _write_entry(self, file_name, entry):
-        self.get_file(file_name).write(json.dumps(entry) + '\n')
+        self.get_file(file_name, mode='w+').write(json.dumps(entry) + '\n')
 
     def _read_entries(self, file_name):
         file = self.get_file(file_name, mode='r')
