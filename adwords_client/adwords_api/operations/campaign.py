@@ -1,4 +1,4 @@
-from .utils import _build_new_bidding_strategy_configuration, _build_money
+from .utils import _build_new_bidding_strategy_configuration, _build_money, _get_selector
 
 
 def campaign_operation(campaign_id: 'Long' = None,
@@ -6,6 +6,9 @@ def campaign_operation(campaign_id: 'Long' = None,
                        budget_id: 'Long' = None,
                        status: 'String' = 'PAUSED',
                        advertising_channel: 'String' = 'SEARCH',
+                       network_setting: 'String[]' = None,
+                       ad_serving_optimization_status: 'String' = None,
+                       positive_geo_target_type: 'String' = None,
                        operator: 'String' = 'ADD',
                        **kwargs):
     bidding_strategy = _build_new_bidding_strategy_configuration(with_bids=False, strategy_type='MANUAL_CPC')
@@ -34,6 +37,22 @@ def campaign_operation(campaign_id: 'Long' = None,
         operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
     if advertising_channel:
         operation['operand']['advertisingChannelType'] = advertising_channel
+    if ad_serving_optimization_status:
+        operation['operand']['adServingOptimizationStatus'] = ad_serving_optimization_status
+    if network_setting:
+        operation['operand']['networkSetting'] = {
+                'targetGoogleSearch': False,
+                'targetSearchNetwork': False,
+                'targetContentNetwork': False,
+                'targetPartnerSearchNetwork': False
+            }
+        for network in network_setting:
+            operation['operand']['networkSetting'][network] = True
+    if positive_geo_target_type:
+        operation['operand']['settings'] = {
+                'xsi_type': 'GeoTargetTypeSetting',
+                'positiveGeoTargetType': positive_geo_target_type,
+            }
     return operation
 
 
@@ -109,3 +128,10 @@ def add_budget(budget: 'Money' = None,
         operation['operand']['isExplicitlyShared'] = False
 
     return operation
+
+
+def get_campaign_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id', 'Name'})
+    return _get_selector(fields, predicates)

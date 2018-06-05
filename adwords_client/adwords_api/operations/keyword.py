@@ -1,5 +1,4 @@
-from .utils import _build_new_bid_type, _build_new_bidding_strategy_configuration
-
+from .utils import _build_new_bid_type, _build_new_bidding_strategy_configuration, _get_selector
 
 def new_keyword_operation(adgroup_id: 'Long' = None,
                           criteria_id: 'Long' = None,
@@ -40,3 +39,10 @@ def new_keyword_operation(adgroup_id: 'Long' = None,
         operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
 
     return operation
+
+
+def get_keyword_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)

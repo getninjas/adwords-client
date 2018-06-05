@@ -1,3 +1,6 @@
+from .utils import _get_selector
+
+
 def adgroup_operation(campaign_id: 'Long' = None,
                       adgroup_id: 'Long' = None,
                       adgroup_name: 'String' = None,
@@ -19,3 +22,25 @@ def adgroup_operation(campaign_id: 'Long' = None,
     if status:
         operation['operand']['status'] = status
     return operation
+
+
+def ad_group_label_operation(operator: 'String' = 'ADD',
+                             ad_group_id: 'Long' = None,
+                             label_id: 'Long' = None,
+                             **kwargs):
+    operation = {
+        'operator': operator.upper(),
+        'operand': {
+            'adGroupId': ad_group_id,
+            'labelId': label_id
+
+        }
+    }
+    return operation
+
+
+def get_ad_group_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)

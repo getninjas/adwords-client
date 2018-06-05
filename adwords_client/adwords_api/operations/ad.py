@@ -1,3 +1,5 @@
+from .utils import _get_selector
+
 def expanded_ad_operation(adgroup_id: 'Long' = None,
                           ad_id: 'Long' = None,
                           status: 'String' = 'PAUSED',
@@ -103,3 +105,28 @@ def _abstract_ad(ad_id: 'Long' = None):
         'id': ad_id,
     }
     return ad
+
+
+def ad_label_operation(ad_id: 'Long' = None,
+                       operator: 'String' = 'ADD',
+                       ad_group_id: 'Long' = None,
+                       label_id: 'Long' = None,
+                       **kwargs):
+    operation = {
+        'operator': operator.upper(),
+        'operand': {
+            'adGroupId': ad_group_id,
+            'adId': ad_id,
+            'labelId': label_id
+
+        }
+    }
+    return operation
+
+
+def get_ad_operation(fields=[], predicates=[], **kwargs):
+    default_fields = kwargs.pop('default_fields', False)
+    if default_fields:
+        fields = set(fields).union({'Id'})
+    return _get_selector(fields, predicates)
+
