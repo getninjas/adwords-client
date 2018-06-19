@@ -242,8 +242,8 @@ class AdWords:
         self.flush_files()
         return jobs
 
-    def split(self):
-        operations_folder = str(uuid.uuid1())
+    def split(self, operations_folder=''):
+        operations_folder = operations_folder or str(uuid.uuid1())
         for entry in self._read_buffer():
             self._write_entry(path.join(operations_folder, '{}.data'.format(entry['campaign_id'])), entry)
         while self._open_files:
@@ -365,6 +365,12 @@ class AdWords:
             self._client = None
             self._operations_buffer = None
             self.services = {}
+            # If this is a django storage, we want to reset the storage and lazy object before fork
+            if hasattr(self.storage, '_wrapped'):
+                # resets the wrapped object in the LazyObject
+                # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
+                # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
+                self.storage.__init__()
             self.map_function(self._batch_operations, files)
 
     def get_accounts(self, client_id=None):
