@@ -184,6 +184,7 @@ def get_search_terms_report(client, customer_id, *args, **kwargs):
                 'KeywordTextMatchingQuery',
                 'Query',
             ]
+    kwargs['include_zero_impressions'] = False
     report = client.get_report(
         'SEARCH_QUERY_PERFORMANCE_REPORT',
         customer_id,
