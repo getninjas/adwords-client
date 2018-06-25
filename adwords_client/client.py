@@ -42,10 +42,6 @@ def _get_dict_min_value(data):
         raise
 
 
-def multiprocessing_starmap(*args, **kwargs):
-    return Pool().starmap(*args, **kwargs)
-
-
 def adwords_client_factory(credentials):
     config = {'adwords': credentials}
     config_yaml = yaml.safe_dump(config)
@@ -58,7 +54,7 @@ class AdWords:
         self.services = {}
         self.table_models = {}
         self.min_id = 0
-        self.map_function = map_function or multiprocessing_starmap
+        self.map_function = map_function or Pool().map
         if storage:
             self.storage = storage
         else:
@@ -361,7 +357,7 @@ class AdWords:
                 raise ValueError('Async operations must have an operation folder defined.')
             logger.info('Running %s...', inspect.stack()[0][3])
             _, files = self.storage.listdir(operations_folder)
-            files = [[path.join(operations_folder, file)] for file in files]
+            files = [path.join(operations_folder, file) for file in files]
             self._client = None
             self._operations_buffer = None
             self.services = {}
