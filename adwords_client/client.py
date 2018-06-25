@@ -48,13 +48,17 @@ def adwords_client_factory(credentials):
     return googleads.adwords.AdWordsClient.LoadFromString(config_yaml)
 
 
+def multiprocessing_map(*args, **kwargs):
+    return Pool().map(*args, **kwargs)
+
+
 class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None):
         self._client = None
         self.services = {}
         self.table_models = {}
         self.min_id = 0
-        self.map_function = map_function or Pool().map
+        self.map_function = map_function or multiprocessing_map
         if storage:
             self.storage = storage
         else:
