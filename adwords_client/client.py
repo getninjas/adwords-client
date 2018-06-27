@@ -240,7 +240,7 @@ class AdWords:
                 logger.info('Waiting for batch jobs to finish...')
                 time.sleep(sleep_time)
                 sleep_time *= 2
-        self._write_entry(path.join(operations_folder, 'jobs.result'), jobs)
+        self._write_entry(path.join(operations_folder, 'jobs.status'), jobs)
         self.flush_files()
         return jobs
 
@@ -250,6 +250,7 @@ class AdWords:
             self._write_entry(path.join(operations_folder, '{}.data'.format(entry['campaign_id'])), entry)
 
         def _close_file(file_handler):
+            file_handler.flush()
             file_handler.close()
 
         with ThreadPoolExecutor(os.cpu_count() * 4) as executor:
@@ -369,7 +370,7 @@ class AdWords:
                 raise ValueError('Async operations must have an operation folder defined.')
             logger.info('Running %s...', inspect.stack()[0][3])
             _, files = self.storage.listdir(operations_folder)
-            files = [path.join(operations_folder, file) for file in files]
+            files = [path.join(operations_folder, file) for file in files if file.endswith('data')]
             self._client = None
             self._operations_buffer = None
             self.services = {}
