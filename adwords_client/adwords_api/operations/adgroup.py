@@ -4,7 +4,7 @@ from .utils import _get_selector
 def adgroup_operation(campaign_id: 'Long' = None,
                       adgroup_id: 'Long' = None,
                       adgroup_name: 'String' = None,
-                      status: 'String' = 'PAUSED',
+                      status: 'String' = None,
                       operator: 'String' = 'ADD',
                       **kwargs):
     operation = {
