@@ -355,7 +355,7 @@ class AdWords:
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def execute_operations(self, operations_folder=None, sync=False):
+    def execute_operations(self, operations_folder=None, sync=False, force_all=False):
         """
         Possible columns in the table:
 
@@ -369,8 +369,21 @@ class AdWords:
             if not operations_folder:
                 raise ValueError('Async operations must have an operation folder defined.')
             logger.info('Running %s...', inspect.stack()[0][3])
-            _, files = self.storage.listdir(operations_folder)
-            files = [path.join(operations_folder, file) for file in files if file.endswith('data')]
+            _, folder_files = self.storage.listdir(operations_folder)
+            files = {}
+            for file_path in folder_files:
+                data_file = None
+                result_file = None
+                if file_path.endswith('.data'):
+                    data_file = file_path
+                elif file_path.endswith('.result'):
+                    data_file, _, _ = file_path.rpartition('.')
+                    result_file = file_path
+                if data_file:
+                    # if entry has been set before (if we saw .result first)
+                    # avoid overwriting the result file value
+                    files[data_file] = files.get(data_file) or result_file
+            selected_files = [path.join(operations_folder, f) for f, data in files.items() if not data or force_all]
             self._client = None
             self._operations_buffer = None
             self.services = {}
@@ -381,7 +394,7 @@ class AdWords:
                 # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
                 self.storage.__init__()
             logger.info('Applyting map function to operation files...')
-            self.map_function(self._batch_operations, files)
+            self.map_function(self._batch_operations, selected_files)
 
     def get_accounts(self, client_id=None):
         operation_builder = OperationsBuilder()
