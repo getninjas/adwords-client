@@ -1,5 +1,5 @@
+googleads==12.2.0
 suds-jurko>=0.6
-googleads~=11.0.1
 oauth2client==4.1.2
 python-dateutil==2.6.0
 pytz==2017.2

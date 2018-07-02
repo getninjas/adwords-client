@@ -3,6 +3,7 @@ import datetime
 import inspect
 import json
 import logging
+import os
 import time
 import uuid
 import yaml
@@ -12,6 +13,7 @@ from math import floor, isfinite
 from multiprocessing import Pool
 from os import path
 from tempfile import NamedTemporaryFile
+from concurrent.futures import ThreadPoolExecutor
 
 import googleads.adwords
 
@@ -238,7 +240,7 @@ class AdWords:
                 logger.info('Waiting for batch jobs to finish...')
                 time.sleep(sleep_time)
                 sleep_time *= 2
-        self._write_entry(path.join(operations_folder, 'jobs.result'), jobs)
+        self._write_entry(path.join(operations_folder, 'jobs.status'), jobs)
         self.flush_files()
         return jobs
 
@@ -246,12 +248,19 @@ class AdWords:
         operations_folder = operations_folder or str(uuid.uuid1())
         for entry in self._read_buffer():
             self._write_entry(path.join(operations_folder, '{}.data'.format(entry['campaign_id'])), entry)
-        while self._open_files:
-            _, file = self._open_files.popitem()
-            file.close()
+
+        def _close_file(file_handler):
+            file_handler.flush()
+            file_handler.close()
+
+        with ThreadPoolExecutor(os.cpu_count() * 4) as executor:
+            executor.map(_close_file, self._open_files.values())
+
+        self._open_files.clear()
         return operations_folder
 
     def _batch_operations(self, file_name):
+        logger.info('Processing operation file %s', file_name)
         bjs = self.service('BatchJobService')
         operation_builder = OperationsBuilder(self.min_id)
         previous_client_id = None
@@ -346,7 +355,7 @@ class AdWords:
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
-    def execute_operations(self, operations_folder=None, sync=False):
+    def execute_operations(self, operations_folder=None, sync=False, force_all=False):
         """
         Possible columns in the table:
 
@@ -360,8 +369,21 @@ class AdWords:
             if not operations_folder:
                 raise ValueError('Async operations must have an operation folder defined.')
             logger.info('Running %s...', inspect.stack()[0][3])
-            _, files = self.storage.listdir(operations_folder)
-            files = [path.join(operations_folder, file) for file in files]
+            _, folder_files = self.storage.listdir(operations_folder)
+            files = {}
+            for file_path in folder_files:
+                data_file = None
+                result_file = None
+                if file_path.endswith('.data'):
+                    data_file = file_path
+                elif file_path.endswith('.result'):
+                    data_file, _, _ = file_path.rpartition('.')
+                    result_file = file_path
+                if data_file:
+                    # if entry has been set before (if we saw .result first)
+                    # avoid overwriting the result file value
+                    files[data_file] = files.get(data_file) or result_file
+            selected_files = [path.join(operations_folder, f) for f, data in files.items() if not data or force_all]
             self._client = None
             self._operations_buffer = None
             self.services = {}
@@ -371,7 +393,8 @@ class AdWords:
                 # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
                 # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
                 self.storage.__init__()
-            self.map_function(self._batch_operations, files)
+            logger.info('Applyting map function to operation files...')
+            self.map_function(self._batch_operations, selected_files)
 
     def get_accounts(self, client_id=None):
         operation_builder = OperationsBuilder()

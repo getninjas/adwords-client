@@ -77,7 +77,7 @@ setup(
     package_data=get_package_data(package),
     install_requires=[
         'google-api-python-client>=1.6.2',
-        'googleads>=11.0.1',
+        'googleads==12.2.0',
         'oauth2client>=4.0.0',
         'python-dateutil>=2.6.0',
         'pytz>=2017.2',
