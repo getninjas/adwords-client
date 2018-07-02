@@ -1,5 +1,6 @@
 from .utils import _build_new_bid_type, _build_new_bidding_strategy_configuration, _get_selector
 
+
 def new_keyword_operation(adgroup_id: 'Long' = None,
                           criteria_id: 'Long' = None,
                           text: 'String' = None,
