@@ -397,6 +397,7 @@ class AdWords:
             self.map_function(self._batch_operations, selected_files)
 
     def get_accounts(self, client_id=None):
+        logger.info('Getting accounts fro client_id %s...', client_id or self.client.client_customer_id)
         operation_builder = OperationsBuilder()
         internal_operation = {
             'object_type': 'managed_customer',
@@ -405,6 +406,21 @@ class AdWords:
         mcs = self.service('ManagedCustomerService')
         return {account['name']: account for account in
                 mcs.get(operation_builder(internal_operation, sync=True), client_id)}
+
+    def get_batchjobs(self, client_id=None):
+        logger.info('Getting batchjobs for account %s...', client_id or self.client.client_customer_id)
+        operation_builder = OperationsBuilder()
+        internal_operation = {
+            'object_type': 'batch_job',
+            'fields': ['Id', 'Status', 'ProgressStats']
+        }
+        bjs = self.service('BatchJobService')
+        yield from bjs.get(operation_builder(internal_operation, sync=True), client_id)
+
+    def cancel_batchjobs(self, jobs, client_id=None):
+        logger.info('Canceling batchjobs for account %s...', client_id or self.client.client_customer_id)
+        bjs = self.service('BatchJobService')
+        return bjs.cancel_jobs(jobs, client_id)
 
     def get_entities(self, get_internal_operation):
         operation_builder = OperationsBuilder()

@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
 logging.getLogger('oauth2client').setLevel(logging.ERROR)
 logging.getLogger('suds').setLevel(logging.WARNING)
+logging.getLogger('zeep').setLevel(logging.WARNING)
 
 
 def _delete_campaigns():
@@ -998,3 +999,8 @@ def test_client():
 def test_get_accounts():
     client = AdWords(workdir='./tests/generated_files')
     client.get_accounts()
+
+
+def test_batchjobs():
+    client = AdWords()
+    list(client.get_batchjobs())
