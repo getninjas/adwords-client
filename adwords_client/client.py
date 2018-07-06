@@ -253,7 +253,7 @@ class AdWords:
             file_handler.flush()
             file_handler.close()
 
-        with ThreadPoolExecutor(os.cpu_count() * 4) as executor:
+        with ThreadPoolExecutor() as executor:
             executor.map(_close_file, self._open_files.values())
 
         self._open_files.clear()
