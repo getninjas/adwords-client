@@ -397,7 +397,7 @@ class AdWords:
             self.map_function(self._batch_operations, selected_files)
 
     def get_accounts(self, client_id=None):
-        logger.info('Getting accounts fro client_id %s...', client_id or self.client.client_customer_id)
+        logger.info('Getting accounts for client_id %s...', client_id or self.client.client_customer_id)
         operation_builder = OperationsBuilder()
         internal_operation = {
             'object_type': 'managed_customer',
