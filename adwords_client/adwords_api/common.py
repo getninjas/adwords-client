@@ -135,7 +135,7 @@ class BaseService:
             operation = operation[0]
         else:
             raise RuntimeError('The operation object is empty')
-        return self.ResultProcessor(self.service.get, operation)
+        yield from self.ResultProcessor(self.service.get, operation)
 
     def mutate(self, client_customer_id=None, sync=None):
         if client_customer_id:

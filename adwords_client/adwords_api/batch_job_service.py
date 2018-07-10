@@ -99,20 +99,12 @@ class BatchJobService(cm.BaseService):
         logger.info('Created new batchjob:\n%s', self.batch_job)
         self.helper = BatchJobHelper(self)
 
-    def cancel_jobs(self, jobs):
-        result = {}
-        for client_id in jobs:
-            self.prepare_mutate()
-            for job in jobs[client_id]:
-                if job['status'] not in ['DONE', 'CANCELING', 'CANCELED']:
-                    self.helper.add_batch_job_operation('SET', job['id'], 'CANCELING')
-            result[client_id] = self.mutate(client_id) if len(self.helper.operations) > 0 else None
-        return result
-
-        self.helper = BatchJobOperations(self.service)
-        self.helper.add_batch_job_operation('SET')
-        self.ResultProcessor = cm.SimpleReturnValue
-        return
+    def cancel_jobs(self, jobs, client_id=None):
+        self.prepare_mutate()
+        for job in jobs:
+            if job['status'] not in ['DONE', 'CANCELING', 'CANCELED']:
+                self.helper.add_batch_job_operation('SET', job['id'], 'CANCELING')
+        return self.mutate(client_id) if len(self.helper.operations) > 0 else None
 
     def get_status(self, batch_job_id, client_customer_id=None):
 
