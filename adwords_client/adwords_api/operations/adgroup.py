@@ -1,10 +1,11 @@
-from .utils import _get_selector
+from .utils import _build_new_bid_type, _build_new_bidding_strategy_configuration, _get_selector
 
 
 def adgroup_operation(campaign_id: 'Long' = None,
                       adgroup_id: 'Long' = None,
                       adgroup_name: 'String' = None,
                       status: 'String' = None,
+                      cpc_bid: 'Bid' = None,
                       operator: 'String' = 'ADD',
                       **kwargs):
     operation = {
@@ -19,8 +20,15 @@ def adgroup_operation(campaign_id: 'Long' = None,
     }
     if adgroup_name:
         operation['operand']['name'] = adgroup_name
+
     if status:
         operation['operand']['status'] = status
+
+    if status != 'REMOVED' and cpc_bid:
+        bidding_strategy = _build_new_bidding_strategy_configuration()
+        bid_type = _build_new_bid_type('CpcBid', cpc_bid)
+        operation['operand']['biddingStrategyConfiguration'] = bidding_strategy
+        operation['operand']['biddingStrategyConfiguration']['bids'].append(bid_type)
     return operation
 
 

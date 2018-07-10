@@ -27,7 +27,7 @@ def _delete_campaigns():
         client.insert(entry)
     operations_folder = client.split()
     client.execute_operations(operations_folder)
-    client.wait_jobs(operations_folder)
+    return client.wait_jobs(operations_folder)
 
 
 def _create_campaign():
@@ -50,6 +50,7 @@ def _create_campaign():
             'campaign_id': -1,
             'adgroup_id': -2,
             'adgroup_name': 'API test adgroup',
+            'cpc_bid': 13.37,
         }
     )
     client.insert(
@@ -81,35 +82,50 @@ def _create_campaign():
     )
     operations_folder = client.split()
     client.execute_operations(operations_folder)
-    client.wait_jobs(operations_folder)
+    return client.wait_jobs(operations_folder)
 
 
 def _get_keywords_report(client=None):
-    client = client or AdWords(workdir='./tests/generated_files')
+    client = client or AdWords()
     report_df = reports.get_keywords_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
-    pprint(report_df)
+    return report_df
+
+
+def _get_adgroups_report(client=None):
+    client = client or AdWords()
+    report_df = reports.get_adgroups_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
     return report_df
 
 
 def _adjust_bids():
     client = AdWords(workdir='./tests/generated_files')
-    report_df = _get_keywords_report(client)
 
-    for campaign in report_df:
+    for keyword in _get_keywords_report(client):
         entry = {
             'object_type': 'keyword',
             'cpc_bid': 4.20,
-            'client_id': campaign['ExternalCustomerId'],
-            'campaign_id': campaign['CampaignId'],
-            'adgroup_id': campaign['AdGroupId'],
-            'criteria_id': campaign['Id'],
+            'client_id': keyword['ExternalCustomerId'],
+            'campaign_id': keyword['CampaignId'],
+            'adgroup_id': keyword['AdGroupId'],
+            'criteria_id': keyword['Id'],
+            'operator': 'SET',
+        }
+        client.insert(entry)
+
+    for adgroup in _get_adgroups_report(client):
+        entry = {
+            'object_type': 'adgroup',
+            'cpc_bid': 4.20,
+            'client_id': adgroup['ExternalCustomerId'],
+            'campaign_id': adgroup['CampaignId'],
+            'adgroup_id': adgroup['AdGroupId'],
             'operator': 'SET',
         }
         client.insert(entry)
 
     operations_folder = client.split()
     client.execute_operations(operations_folder)
-    client.wait_jobs(operations_folder)
+    return client.wait_jobs(operations_folder)
 
 
 def _sync_operations():
@@ -987,17 +1003,33 @@ def test_build_adwords_operations():
     _build_campaign_ad_schedule_operations()
 
 
+def _assert_jobs(jobs):
+    assert not jobs['dirty']
+    assert not jobs['pending']
+    for acc in jobs['done'].values():
+        for job in acc.values():
+            assert job['status'] == 'DONE'
+            assert job['estimated_percent_executed'] == 100
+            assert job['num_operations_executed'] == job['num_operations_succeeded'] == job['num_results_written']
+
+
 def test_client():
-    _delete_campaigns()
-    _create_campaign()
-    _adjust_bids()
-    _get_keywords_report()
-    _delete_campaigns()
+    _assert_jobs(_delete_campaigns())
+    _assert_jobs(_create_campaign())
+    _assert_jobs(_adjust_bids())
+    kw_report = _get_keywords_report()
+    assert kw_report[0]['CpcBid'] == 4.20
+    adg_report = _get_adgroups_report()
+    assert adg_report[0]['CpcBid'] == 4.20
+    _assert_jobs(_delete_campaigns())
+
+
+def test_sync_operations():
     _sync_operations()
 
 
 def test_get_accounts():
-    client = AdWords(workdir='./tests/generated_files')
+    client = AdWords()
     client.get_accounts()
 
 
