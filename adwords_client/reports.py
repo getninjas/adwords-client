@@ -145,6 +145,8 @@ def get_keywords_report(client, customer_id, *args, **kwargs):
                 'PostClickQualityScore',
                 'SearchPredictedCtr',
                 'QualityScore',
+                'ValuePerAllConversion',
+                'ValuePerConversion',
             ]
     report = client.get_report(
         'KEYWORDS_PERFORMANCE_REPORT',
@@ -329,6 +331,8 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
                 'SearchImpressionShare',
                 'CpcBid',
                 'Labels',
+                'ValuePerAllConversion',
+                'ValuePerConversion',
             ]
     report = client.get_report(
         'ADGROUP_PERFORMANCE_REPORT',
