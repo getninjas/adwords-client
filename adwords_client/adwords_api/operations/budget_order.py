@@ -20,8 +20,8 @@ def budget_order_operation(budget_order_id: 'Long' = None,
         'operand': {
             'billingAccountId': billing_account_id,
             'primaryBillingId': primary_billing_id,
-            'startDateTime': start_date_time + time_zone,
-            'endDateTime': end_date_time + time_zone,
+            'startDateTime': start_date_time + ' ' + time_zone,
+            'endDateTime': end_date_time + ' ' + time_zone,
             'spendingLimit':
                 {
                     'microAmount': spending_limit

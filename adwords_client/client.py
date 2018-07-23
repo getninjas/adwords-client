@@ -115,7 +115,7 @@ class AdWords:
                 yield from self._read_entries(path.join(folder_name, file))
 
     def _write_buffer(self, entry):
-        self.operations.write(json.dumps(entry, default=str) + '\n')
+        self.operations.write(json.dumps(entry) + '\n')
 
     def _read_buffer(self):
         self.operations.flush()

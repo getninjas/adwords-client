@@ -5,7 +5,6 @@ from adwords_client.client import AdWords
 from adwords_client import reports
 from adwords_client.internal_api.builder import OperationsBuilder
 from datetime import datetime
-import json
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
@@ -268,8 +267,8 @@ def _build_budget_order_operations():
         'client_id': 7857288943,
         'billing_account_id': '1234-5678-9012-3456',
         'primary_billing_id': '1234-5678-9012',
-        'start_date_time': json.loads(json.dumps(start_date_time, default=str)),
-        'end_date_time': json.loads(json.dumps(end_date_time, default=str)),
+        'start_date_time': start_date_time.isoformat(),
+        'end_date_time': end_date_time.isoformat(),
         'time_zone': time_zone,
         'spending_limit': 10000,
         'po_number': 'My Test Reference',
@@ -978,7 +977,7 @@ def _build_offline_conversions_operations():
         'client_id': client_id,
         'google_click_id': gclid,
         'conversion_name': conversion_name,
-        'conversion_time': json.loads(json.dumps(conversion_time, default=str)),
+        'conversion_time': conversion_time.isoformat(),
         'time_zone': 'America/Sao_Paulo',
         'conversion_value': conversion_value,
         'conversion_currency_code': conversion_currency_code,
@@ -989,8 +988,8 @@ def _build_offline_conversions_operations():
         'client_id': client_id,
         'google_click_id': gclid,
         'conversion_name': conversion_name,
-        'conversion_time': json.loads(json.dumps(conversion_time, default=str)),
-        'adjustment_time': json.loads(json.dumps(adjustment_time, default=str)),
+        'conversion_time': conversion_time.isoformat(),
+        'adjustment_time': adjustment_time.isoformat(),
         'time_zone': 'America/Sao_Paulo',
         'conversion_value': conversion_value,
         'conversion_currency_code': conversion_currency_code,
@@ -1002,8 +1001,8 @@ def _build_offline_conversions_operations():
         'client_id': client_id,
         'google_click_id': gclid,
         'conversion_name': conversion_name,
-        'conversion_time': json.loads(json.dumps(conversion_time, default=str)),
-        'adjustment_time': json.loads(json.dumps(adjustment_time, default=str)),
+        'conversion_time': conversion_time.isoformat(),
+        'adjustment_time': adjustment_time.isoformat(),
         'time_zone': 'America/Sao_Paulo',
         'conversion_value': conversion_value,
         'conversion_currency_code': conversion_currency_code,

@@ -2,6 +2,7 @@ import re
 import math
 from ..adwords_api import operations
 from datetime import datetime
+import dateutil.parser
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -60,11 +61,8 @@ def process_str_to_datetime(x):
 
 
 def process_json_datetime_to_adw_format(x):
-    try:
-        datetime_converted = datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f")
-    except ValueError:
-        datetime_converted = datetime.strptime(x, "%Y-%m-%d %H:%M:%S")
-    return format(datetime_converted, '%Y%m%d %H%M%S ')
+    datetime_converted = dateutil.parser.parse(x)
+    return format(datetime_converted, '%Y%m%d %H%M%S')
 
 
 class AdwordsMapper:
