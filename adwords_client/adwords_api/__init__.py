@@ -10,3 +10,5 @@ from .campaign_service import CampaignService
 from .shared_criterion_service import SharedCriterionService
 from .campaign_extension_setting_service import CampaignExtensionSettingService
 from .campaign_criterion_service import CampaignCriterionService
+from .offline_conversion_feed_service import OfflineConversionFeedService
+from .offline_conversion_adjustment_feed_service import OfflineConversionAdjustmentFeedService

@@ -1,6 +1,7 @@
 import re
 import math
 from ..adwords_api import operations
+from datetime import datetime
 
 double_regex = re.compile(r'[^\d.]+')
 
@@ -50,8 +51,21 @@ def cast_int(x):
     return int(x)
 
 
-def process_array_of_str(x):
+def process_list_of_str(x):
     return [str(item) for item in x]
+
+
+def process_str_to_datetime(x):
+    return datetime.strptime(x, '%Y%m%d %H%M%S')
+
+
+def process_json_datetime_to_adw_format(x):
+    try:
+        datetime_converted = datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f")
+    except ValueError:
+        datetime_converted = datetime.strptime(x, "%Y-%m-%d %H:%M:%S")
+    return format(datetime_converted, '%Y%m%d %H%M%S ')
+
 
 class AdwordsMapper:
     def __init__(self, converter=noop, adapter=noop):
@@ -83,7 +97,8 @@ MAPPERS = {
     'Integer': AdwordsMapper(process_integer, cast_int),
     'String': AdwordsMapper(str, str),
     'Identity': AdwordsMapper(noop, noop),
-    'String[]': AdwordsMapper(process_array_of_str, process_array_of_str),
+    'StringList': AdwordsMapper(process_list_of_str, process_list_of_str),
+    'DateTime': AdwordsMapper(process_str_to_datetime, process_json_datetime_to_adw_format),
 }
 
 FIELD_MAP = {
@@ -92,6 +107,10 @@ FIELD_MAP = {
     'budget_id': 'Long',
     'language_id': 'Long',
     'location_id': 'Long',
+    'conversion_time': 'DateTime',
+    'adjustment_time': 'DateTime',
+    'start_date_time': 'DateTime',
+    'end_date_time': 'DateTime',
 }
 
 FIELD_MAP.update(operations.keyword.new_keyword_operation.__annotations__)

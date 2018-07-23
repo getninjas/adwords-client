@@ -2,7 +2,7 @@ import logging
 from .mappers import cast_to_adwords
 from ..adwords_api.operations import (campaign, adgroup, keyword, ad, label, campaign_shared_set, shared_criterion,
                                       shared_set, managed_customer, budget_order, attach_label,
-                                      campaign_extensions_setting, campaign_criterion, utils)
+                                      campaign_extensions_setting, campaign_criterion, utils, offline_conversion_feed)
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +96,19 @@ class OperationsBuilder:
                 yield {}
             elif object_type == 'batch_job':
                 yield from self._parse_batch_job_operation(operation)
+            elif object_type == 'offline_conversion' and sync:
+                yield from self._parse_offline_conversion_operation(operation)
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
+
+    def _parse_offline_conversion_operation(self, operation):
+        if 'fields' in operation or 'default_fields' in operation:
+            raise NotImplementedError()
+        elif operation.get('operator', None) in ['SET', 'REMOVE']:
+            yield offline_conversion_feed.set_offline_conversion_feed_operation(**operation)
+        else:
+            yield offline_conversion_feed.add_offline_conversion_feed_operation(**operation)
 
     def _parse_batch_job_operation(self, operation):
         if 'fields' in operation or 'default_fields' in operation:
@@ -111,6 +121,8 @@ class OperationsBuilder:
             yield campaign_criterion.get_campaign_criterion_operation(**operation)
         elif operation['object_type'] == 'campaign_ad_schedule':
             yield campaign_criterion.ad_schedule_operation(**operation)
+        elif operation['object_type'] == 'campaign_targeted_location':
+            yield campaign_criterion.targeted_location_operation(**operation)
         else:
             raise NotImplementedError()
 

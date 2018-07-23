@@ -31,6 +31,31 @@ def ad_schedule_operation(campaign_id: 'Long' = None,
     return operation
 
 
+def targeted_location_operation(campaign_id: 'Long' = None,
+                                location_id: 'Long' = None,
+                                bid_modifier: 'Double' = None,
+                                operator: 'String' = 'ADD',
+                                **kwargs):
+    operation = {
+        # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation
+        'xsi_type': 'CampaignCriterionOperation',
+        'operator': operator.upper(),
+        'operand': {
+            # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterion
+            'xsi_type': 'CampaignCriterion',
+            'campaignId': campaign_id,
+            'criterion': {
+                # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.Location
+                'xsi_type': 'Location',
+                'id': location_id,
+            }
+        },
+    }
+    if bid_modifier:
+        operation['operand']['bidModifier'] = bid_modifier
+    return operation
+
+
 def get_campaign_criterion_operation(fields: 'list'=None, predicates: 'list'=None, **kwargs):
     predicates = predicates or []
     fields = set(fields or [])

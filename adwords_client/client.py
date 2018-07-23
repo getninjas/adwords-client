@@ -115,7 +115,7 @@ class AdWords:
                 yield from self._read_entries(path.join(folder_name, file))
 
     def _write_buffer(self, entry):
-        self.operations.write(json.dumps(entry) + '\n')
+        self.operations.write(json.dumps(entry, default=str) + '\n')
 
     def _read_buffer(self):
         self.operations.flush()
@@ -303,7 +303,7 @@ class AdWords:
             'campaign_callout': 'CampaignExtensionSettingService',
             'campaign_structured_snippet': 'CampaignExtensionSettingService',
             'account_label': 'AccountLabelService',
-            'campaign_language': 'CampaignCriterionService'
+            'campaign_language': 'CampaignCriterionService',
         }
 
         if internal_operation['object_type'] == 'attach_label':
@@ -315,6 +315,12 @@ class AdWords:
                 return object_type_service_mapper.get('campaign')
             elif 'customer_id' in internal_operation:
                 return object_type_service_mapper.get('managed_customer')
+
+        if internal_operation['object_type'] == 'offline_conversion':
+            if internal_operation.get('operator', None) in ['SET', 'REMOVE']:
+                return 'OfflineConversionAdjustmentFeedService'
+            else:
+                return 'OfflineConversionFeedService'
 
         try:
             return object_type_service_mapper.get(internal_operation['object_type'])
@@ -330,7 +336,7 @@ class AdWords:
         for internal_operation in self._read_buffer():
             client_id = internal_operation['client_id']
             service_name = self._get_service_from_object_type(internal_operation)
-            for adwords_operation in operation_builder(internal_operation):
+            for adwords_operation in operation_builder(internal_operation, sync=True):
                 service = self.service(service_name)
                 if previous_client_id is not None:
                     previous_service = self.service(previous_service_name)

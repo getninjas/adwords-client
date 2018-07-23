@@ -6,7 +6,7 @@ def campaign_operation(campaign_id: 'Long' = None,
                        budget_id: 'Long' = None,
                        status: 'String' = 'PAUSED',
                        advertising_channel: 'String' = 'SEARCH',
-                       network_setting: 'String[]' = None,
+                       network_setting: 'StringList' = None,
                        ad_serving_optimization_status: 'String' = None,
                        positive_geo_target_type: 'String' = None,
                        operator: 'String' = 'ADD',
@@ -81,6 +81,7 @@ def add_campaign_language(campaign_id: 'Long' = None,
 def add_campaign_location(campaign_id: 'Long' = None,
                           location_id: 'Long' = None,
                           operator: 'String' = 'ADD',
+                          bid_modifier: 'Double' = None,
                           **kwargs):
     operation = {
         # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation

@@ -1,5 +1,3 @@
-
-
 def attach_label_operation(label_id: 'Long' = None,
                  campaign_id: 'Long' = None,
                  ad_id: 'Long' = None,
@@ -25,9 +23,13 @@ def attach_label_operation(label_id: 'Long' = None,
         operation['operand']['adGroupId'] = ad_group_id
         operation['xsi_type'] = 'AdGroupLabelOperation'
     if ad_id:
+        if campaign_id:
+            operation['operand'].pop('campaignId', None)
         operation['operand']['adId'] = ad_id
         operation['xsi_type'] = 'AdGroupAdLabelOperation'
     if criterion_id:
+        if campaign_id:
+            operation['operand'].pop('campaignId', None)
         operation['operand']['criterionId'] = criterion_id
         operation['xsi_type'] = 'AdGroupCriterionLabelOperation'
 

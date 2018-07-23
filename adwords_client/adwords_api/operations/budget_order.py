@@ -4,11 +4,12 @@ from .utils import _get_selector
 def budget_order_operation(budget_order_id: 'Long' = None,
                            billing_account_id: 'Long' = None,
                            primary_billing_id: 'Long' = None,
-                           start_date_time: 'String' = 'BRL',
-                           end_date_time: 'String' = 'ADD',
-                           spending_limit: 'Money' = None,
+                           start_date_time: 'DateTime' = None,
+                           end_date_time: 'DateTime' = None,
+                           spending_limit: 'Money' = -1,
                            po_number: 'String' = None,
                            budget_order_name: 'String' = None,
+                           time_zone: 'String' = 'America/Sao_Paulo',
                            operator: 'String' = 'ADD',
                                **kwargs):
     if not spending_limit:
@@ -19,8 +20,8 @@ def budget_order_operation(budget_order_id: 'Long' = None,
         'operand': {
             'billingAccountId': billing_account_id,
             'primaryBillingId': primary_billing_id,
-            'startDateTime': start_date_time,
-            'endDateTime': end_date_time,
+            'startDateTime': start_date_time + time_zone,
+            'endDateTime': end_date_time + time_zone,
             'spendingLimit':
                 {
                     'microAmount': spending_limit
