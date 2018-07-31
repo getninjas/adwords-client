@@ -403,7 +403,7 @@ class AdWords:
                 # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
                 self.storage.__init__()
             logger.info('Applyting map function to operation files...')
-            self.map_function(self._batch_operations, selected_files)
+            return list(self.map_function(self._batch_operations, selected_files))
 
     def get_accounts(self, client_id=None):
         logger.info('Getting accounts for client_id %s...', client_id or self.client.client_customer_id)
