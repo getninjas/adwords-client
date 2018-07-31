@@ -277,6 +277,7 @@ def _build_budget_order_operations():
     mutate_adwords_operation = next(operation_builder(mutate_internal_operation, sync=True))
 
     expected_mutate_adwords_operation = {
+        'xsi_type': 'BudgetOrderOperation',
         'operand':
             {
                 'budgetOrderName': 'Budget Order Name Test',
@@ -884,6 +885,7 @@ def _build_managed_customer_operations():
 
     mutate_adwords_operation = next(operation_builder(mutate_internal_operation, sync=True))
     expected_mutate_adwords_operation = {
+        'xsi_type': 'ManagedCustomerOperation',
         'operand': {
             'currencyCode': 'BRL',
             'name': 'Customer Name',

@@ -329,35 +329,38 @@ class AdWords:
             raise
 
     def _sync_operations(self):
-        previous_client_id = None
-        previous_service_name = None
         operation_builder = OperationsBuilder()
         results = []
+        errors = []
+        number_of_operations = 0
+        max_operations = 1500
+        service = None
+        client_id = None
         for internal_operation in self._read_buffer():
             client_id = internal_operation['client_id']
             service_name = self._get_service_from_object_type(internal_operation)
+            service = self.service(service_name)
+            if not number_of_operations:
+                service.prepare_mutate(sync=True)
             for adwords_operation in operation_builder(internal_operation, sync=True):
-                service = self.service(service_name)
-                if previous_client_id is not None:
-                    previous_service = self.service(previous_service_name)
-                    if client_id != previous_client_id or service_name != previous_service_name:
-                        # time to upload
-                        results.extend(previous_service.mutate(previous_client_id, sync=True))
-                        # prepare for next upload
-                        service.prepare_mutate(sync=True)
-                else:
-                    # this runs on the first loop
-                    service.prepare_mutate(sync=True)
-
-                service.helper.add_operation(adwords_operation)
-                previous_client_id = client_id
-                previous_service_name = service_name
-        if previous_service_name and previous_client_id:
-            previous_service = self.service(previous_service_name)
-            results.extend(previous_service.mutate(previous_client_id, sync=True))
-
+                if adwords_operation:
+                    number_of_operations += 1
+                    service.helper.add_operation(adwords_operation)
+                    if number_of_operations > 0 and number_of_operations % max_operations == 0:
+                        partial_results = service.mutate(client_customer_id=client_id, sync=True)
+                        get_errors = getattr(partial_results, "get_errors", None)
+                        partial_errors = get_errors() if callable(get_errors) else []
+                        results.extend(partial_results)
+                        errors.extend(partial_errors)
+        if service:
+            if service.helper.operations:
+                partial_results = service.mutate(client_customer_id=client_id, sync=True)
+                get_errors = getattr(partial_results, "get_errors", None)
+                partial_errors = get_errors() if callable(get_errors) else []
+                results.extend(partial_results)
+                errors.extend(partial_errors)
         self._operations_buffer = None
-        return results
+        return results, errors
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.

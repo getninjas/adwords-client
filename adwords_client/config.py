@@ -7,6 +7,7 @@ FIELDS = {
     'client_id': None,
     'client_secret': None,
     'refresh_token': None,
+    'partial_failure': None,
 }
 
 

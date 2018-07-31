@@ -17,6 +17,7 @@ def budget_order_operation(budget_order_id: 'Long' = None,
 
     operation = {
         'operator': operator.upper(),
+        'xsi_type': 'BudgetOrderOperation',
         'operand': {
             'billingAccountId': billing_account_id,
             'primaryBillingId': primary_billing_id,
