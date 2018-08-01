@@ -52,7 +52,7 @@ class BaseResult:
         return self.result.__repr__()
 
     def __iter__(self):
-        if 'value' in self.result:
+        if self.result and 'value' in self.result:
             for entry in self.result.value:
                 yield entry
 
@@ -88,7 +88,7 @@ class SyncReturnValue(BaseResult):
                 logger.error('Problem sync uploading the data, retrying for the %s time...', fail_counter)
 
     def get_errors(self):
-        if 'partialFailureErrors' in self.result:
+        if self.result and 'partialFailureErrors' in self.result:
             for entry in self.result.partialFailureErrors:
                 entry['operation_failed'] = self.operations_sent[entry.fieldPathElements[0].index]
                 yield entry
