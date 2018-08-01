@@ -55,7 +55,7 @@ def multiprocessing_map(*args, **kwargs):
 
 
 class AdWords:
-    def __init__(self, workdir=None, storage=None, map_function=None):
+    def __init__(self, workdir=None, storage=None, map_function=None, **kwargs):
         self._client = None
         self.services = {}
         self.table_models = {}
@@ -67,12 +67,15 @@ class AdWords:
             self.storage = storages.FilesystemStorage(workdir) if workdir else storages.TemporaryFilesystemStorage()
         self._open_files = {}
         self._operations_buffer = None
+        self.extra_options = kwargs
 
     @property
     def client(self):
         if not self._client:
             config.configure()
-            self._client = adwords_client_factory(config.FIELDS)
+            client_settings = config.FIELDS.copy()
+            client_settings.update(self.extra_options)
+            self._client = adwords_client_factory(client_settings)
         return self._client
 
     @property

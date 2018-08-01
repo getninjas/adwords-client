@@ -85,7 +85,7 @@ class SyncReturnValue(BaseResult):
                 if fail_counter > 3:
                     logger.error('Problem sync uploading the data, failure...')
                     raise e
-                logger.error('Problem sync uploading the data, retrying for the %snd time...', fail_counter)
+                logger.error('Problem sync uploading the data, retrying for the %s time...', fail_counter)
 
     def get_errors(self):
         if 'partialFailureErrors' in self.result:
