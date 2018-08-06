@@ -1,6 +1,7 @@
 import requests
 import logging
 from functools import lru_cache
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +52,8 @@ class BaseResult:
         return self.result.__repr__()
 
     def __iter__(self):
-        if 'value' in self.result:
-            for entry in self.value:
+        if self.result and 'value' in self.result:
+            for entry in self.result.value:
                 yield entry
 
 
@@ -61,20 +62,35 @@ class SyncReturnValue(BaseResult):
         super().__init__(callback, parameters)
         label_operations = [adw_op for adw_op in parameters if 'labelId' in adw_op['operand']]
         regular_operations = [adw_op for adw_op in parameters if 'labelId' not in adw_op['operand']]
-        results = []
-        if label_operations:
-            partial_results = callback.mutateLabel(label_operations)
-            results.append(partial_results)
-        if regular_operations:
-            partial_results = callback.mutate(regular_operations)
-            results.append(partial_results)
-        self.result = results
 
-    def __iter__(self):
-        for item in self.result:
-            item_type = item['ListReturnValue.Type']
-            for entry in item.value:
-                entry['returnType'] = item_type
+        if label_operations:
+            self.result = self._upload_sync_operations(callback.mutateLabel, label_operations)
+            self.operations_sent = label_operations
+        elif regular_operations:
+            self.result = self._upload_sync_operations(callback.mutate, regular_operations)
+            self.operations_sent = regular_operations
+
+
+    def _upload_sync_operations(self, callback, operations):
+        fail_counter = 0
+        done = False
+        while not done:
+            try:
+                results = callback(operations)
+                done = True
+                return results
+            except Exception as e:
+                fail_counter += 1
+                time.sleep(fail_counter*60)
+                if fail_counter > 3:
+                    logger.error('Problem sync uploading the data, failure...')
+                    raise e
+                logger.error('Problem sync uploading the data, retrying for the %s time...', fail_counter)
+
+    def get_errors(self):
+        if self.result and 'partialFailureErrors' in self.result:
+            for entry in self.result.partialFailureErrors:
+                entry['operation_failed'] = self.operations_sent[entry.fieldPathElements[0].index]
                 yield entry
 
 
@@ -184,4 +200,10 @@ class SyncServiceHelper:
         self.operations = []
 
     def add_operation(self, operation):
+        if self.operations:
+            if operation.get('xsi_type', None) != self.operations[-1].get('xsi_type', None):
+                raise RuntimeError('Only one operation type is supported per time')
         self.operations.append(operation)
+
+    def clear_operations(self):
+        self.operations = []

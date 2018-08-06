@@ -13,7 +13,7 @@ class CustomerService(cm.BaseService):
             raise RuntimeError('Only one customer operation is supported per time')
         else:
             operation = self.helper.operations[0]
-            customers = self.sync_get(operation={}, client_id=client_customer_id)
+            customers = self.get(operation={}, client_id=client_customer_id)
             if customers:
                 customer = customers[0]
                 if 'tracking_url_template' in operation:
@@ -30,7 +30,7 @@ class CustomerService(cm.BaseService):
             else:
                 raise Exception('No customers with this Id')
 
-    def sync_get(self, operation, client_id=None):
+    def get(self, operation, client_id=None):
         if client_id:
             self.client.SetClientCustomerId(client_id)
         return self.service.getCustomers()

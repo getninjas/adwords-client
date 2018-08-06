@@ -4,6 +4,7 @@ from pprint import pprint
 from adwords_client.client import AdWords
 from adwords_client import reports
 from adwords_client.internal_api.builder import OperationsBuilder
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleads').setLevel(logging.ERROR)
@@ -257,13 +258,18 @@ def _build_budget_order_operations():
     expected_get_adwords_operation['fields'] = sorted(expected_get_adwords_operation['fields'])
     assert expected_get_adwords_operation == get_adwords_operation
 
+    start_date_time = datetime(2018, 12, 30, 23, 59, 59)
+    end_date_time = datetime(2037, 12, 30, 23, 59, 59)
+    time_zone = 'America/Sao_Paulo'
+
     mutate_internal_operation = {
         'object_type': 'budget_order',
         'client_id': 7857288943,
         'billing_account_id': '1234-5678-9012-3456',
         'primary_billing_id': '1234-5678-9012',
-        'start_date_time': '20361231 235959 America/Los_Angeles',
-        'end_date_time': '20371230 235959 America/Los_Angeles',
+        'start_date_time': start_date_time.isoformat(),
+        'end_date_time': end_date_time.isoformat(),
+        'time_zone': time_zone,
         'spending_limit': 10000,
         'po_number': 'My Test Reference',
         'budget_order_name': 'Budget Order Name Test',
@@ -271,14 +277,15 @@ def _build_budget_order_operations():
     mutate_adwords_operation = next(operation_builder(mutate_internal_operation, sync=True))
 
     expected_mutate_adwords_operation = {
+        'xsi_type': 'BudgetOrderOperation',
         'operand':
             {
                 'budgetOrderName': 'Budget Order Name Test',
-                'startDateTime': '20361231 235959 America/Los_Angeles',
+                'startDateTime': format(start_date_time, '%Y%m%d %H%M%S ') + time_zone,
                 'billingAccountId': '1234-5678-9012-3456',
                 'poNumber': 'My Test Reference',
                 'spendingLimit': {'microAmount': 10000},
-                'endDateTime': '20371230 235959 America/Los_Angeles',
+                'endDateTime': format(end_date_time, '%Y%m%d %H%M%S ') + time_zone,
                 'primaryBillingId': '1234-5678-9012'
             },
         'operator': 'ADD'
@@ -878,6 +885,7 @@ def _build_managed_customer_operations():
 
     mutate_adwords_operation = next(operation_builder(mutate_internal_operation, sync=True))
     expected_mutate_adwords_operation = {
+        'xsi_type': 'ManagedCustomerOperation',
         'operand': {
             'currencyCode': 'BRL',
             'name': 'Customer Name',
@@ -956,6 +964,106 @@ def _build_attach_label_operations():
     assert expected_mutate_adwords_operation == mutate_adwords_operation
 
 
+def _build_offline_conversions_operations():
+    operation_builder = OperationsBuilder()
+    client_id = 1234567890
+    gclid = 'gclid_teste'
+    conversion_name = 'conversion name'
+    conversion_time = datetime(2018, 12, 30, 23, 59, 59)
+    adjustment_time = datetime(2019, 12, 30, 23, 59, 59)
+    conversion_value = 12.0
+    conversion_currency_code = 'BRL'
+
+    add_internal_operation = {
+        'object_type': 'offline_conversion',
+        'client_id': client_id,
+        'google_click_id': gclid,
+        'conversion_name': conversion_name,
+        'conversion_time': conversion_time.isoformat(),
+        'time_zone': 'America/Sao_Paulo',
+        'conversion_value': conversion_value,
+        'conversion_currency_code': conversion_currency_code,
+    }
+
+    set_internal_operation = {
+        'object_type': 'offline_conversion',
+        'client_id': client_id,
+        'google_click_id': gclid,
+        'conversion_name': conversion_name,
+        'conversion_time': conversion_time.isoformat(),
+        'adjustment_time': adjustment_time.isoformat(),
+        'time_zone': 'America/Sao_Paulo',
+        'conversion_value': conversion_value,
+        'conversion_currency_code': conversion_currency_code,
+        'operator': 'SET'
+    }
+
+    remove_internal_operation = {
+        'object_type': 'offline_conversion',
+        'client_id': client_id,
+        'google_click_id': gclid,
+        'conversion_name': conversion_name,
+        'conversion_time': conversion_time.isoformat(),
+        'adjustment_time': adjustment_time.isoformat(),
+        'time_zone': 'America/Sao_Paulo',
+        'conversion_value': conversion_value,
+        'conversion_currency_code': conversion_currency_code,
+        'operator': 'REMOVE'
+    }
+
+    add_adwords_operation = next(operation_builder(add_internal_operation, sync=True))
+
+    expected_add_adwords_operation = {
+        'xsi_type': 'OfflineConversionFeedOperation',
+        'operand': {
+            'xsi_type': 'OfflineConversionFeed',
+            'googleClickId': 'gclid_teste',
+            'conversionName': 'conversion name',
+            'conversionTime': '20181230 235959 America/Sao_Paulo',
+            'conversionValue': 12.0,
+            'conversionCurrencyCode': 'BRL'
+        },
+        'operator': 'ADD'
+    }
+    assert add_adwords_operation == expected_add_adwords_operation
+
+    set_adwords_operation = next(operation_builder(set_internal_operation, sync=True))
+    expected_set_adwords_operation = {
+        'xsi_type': 'OfflineConversionAdjustmentFeedOperation',
+        'operand':
+            {'xsi_type': 'GclidOfflineConversionAdjustmentFeed',
+             'googleClickId': 'gclid_teste',
+             'conversionName': 'conversion name',
+             'conversionTime': '20181230 235959 America/Sao_Paulo',
+             'adjustedValue': 12.0,
+             'adjustedValueCurrencyCode': 'BRL',
+             'adjustmentTime': '20191230 235959 America/Sao_Paulo',
+             'adjustmentType': 'RESTATE'
+             },
+        'operator': 'ADD'
+    }
+
+    assert set_adwords_operation == expected_set_adwords_operation
+
+    remove_adwords_operation = next(operation_builder(remove_internal_operation, sync=True))
+
+    expected_remove_adwords_operation = {
+        'xsi_type': 'OfflineConversionAdjustmentFeedOperation',
+        'operand': {'xsi_type': 'GclidOfflineConversionAdjustmentFeed',
+                    'googleClickId': 'gclid_teste',
+                    'conversionName': 'conversion name',
+                    'conversionTime': '20181230 235959 America/Sao_Paulo',
+                    'adjustedValue': 12.0,
+                    'adjustedValueCurrencyCode': 'BRL',
+                    'adjustmentTime': '20191230 235959 America/Sao_Paulo',
+                    'adjustmentType': 'RETRACT'
+                    },
+        'operator': 'ADD'
+    }
+
+    assert remove_adwords_operation == expected_remove_adwords_operation
+
+
 def _build_operations_with_default_fields():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
@@ -1001,6 +1109,7 @@ def test_build_adwords_operations():
     _build_attach_label_operations()
     _build_operations_with_default_fields()
     _build_campaign_ad_schedule_operations()
+    _build_offline_conversions_operations()
 
 
 def _assert_jobs(jobs):

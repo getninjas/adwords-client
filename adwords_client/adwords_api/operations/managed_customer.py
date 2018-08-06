@@ -1,13 +1,14 @@
 from .utils import _get_selector
 
 
-def managed_customer_operation(client_id: 'Long' = None,
+def managed_customer_operation(customer_id: 'Long' = None,
                                name: 'String' = None,
                                currency_code: 'String' = None,
                                operator: 'String' = 'ADD',
                                date_time_zone: 'String' = None,
                                **kwargs):
     operation = {
+        'xsi_type': 'ManagedCustomerOperation',
         'operator': operator.upper(),
         'operand': {
         }
@@ -18,21 +19,22 @@ def managed_customer_operation(client_id: 'Long' = None,
         operation['operand']['dateTimeZone'] = date_time_zone
     if name:
         operation['operand']['name'] = name
-    if client_id:
-        operation['operand']['customerId'] = client_id
+    if customer_id:
+        operation['operand']['customerId'] = customer_id
         operation['operator'] = 'SET'
     return operation
 
 
-def managed_customer_label_operation(client_id: 'Long' = None,
+def managed_customer_label_operation(customer_id: 'Long' = None,
                                      operator: 'String' = 'ADD',
                                      label_id: 'Long' = None,
                                      **kwargs):
     operation = {
+        'xsi_type': 'ManagedCustomerLabelOperation',
         'operator': operator.upper(),
         'operand': {
             'labelId': label_id,
-            'customerId': client_id
+            'customerId': customer_id
         }
     }
     return operation
