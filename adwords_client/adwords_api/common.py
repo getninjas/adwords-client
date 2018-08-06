@@ -58,25 +58,25 @@ class BaseResult:
 
 
 class SyncReturnValue(BaseResult):
-    def __init__(self, callback, parameters, final_callback):
+    def __init__(self, callback, parameters):
         super().__init__(callback, parameters)
         label_operations = [adw_op for adw_op in parameters if 'labelId' in adw_op['operand']]
         regular_operations = [adw_op for adw_op in parameters if 'labelId' not in adw_op['operand']]
 
         if label_operations:
-            self.result = self._upload_sync_operations(callback.mutateLabel, label_operations, final_callback)
+            self.result = self._upload_sync_operations(callback.mutateLabel, label_operations)
             self.operations_sent = label_operations
         elif regular_operations:
-            self.result = self._upload_sync_operations(callback.mutate, regular_operations, final_callback)
+            self.result = self._upload_sync_operations(callback.mutate, regular_operations)
             self.operations_sent = regular_operations
 
-    def _upload_sync_operations(self, callback, operations, final_callback):
+
+    def _upload_sync_operations(self, callback, operations):
         fail_counter = 0
         done = False
         while not done:
             try:
                 results = callback(operations)
-                final_callback()
                 done = True
                 return results
             except Exception as e:
@@ -157,7 +157,7 @@ class BaseService:
         if client_customer_id:
             self.client.SetClientCustomerId(client_customer_id)
         if sync:
-            return self.ResultProcessor(self.service, self.helper.operations, self.helper.clear_operations)
+            return self.ResultProcessor(self.service, self.helper.operations)
         return self.ResultProcessor(self.service.mutate, self.helper.operations)
 
 

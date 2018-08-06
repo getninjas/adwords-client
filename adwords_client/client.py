@@ -336,7 +336,7 @@ class AdWords:
         results = []
         errors = []
         number_of_operations = 0
-        max_operations = 1500
+        max_operations = 1000
         service = None
         client_id = None
         for internal_operation in self._read_buffer():
@@ -355,6 +355,7 @@ class AdWords:
                         partial_errors = get_errors() if callable(get_errors) else []
                         results.extend(partial_results)
                         errors.extend(partial_errors)
+                        service.prepare_mutate(sync=True)
         if service:
             if service.helper.operations:
                 partial_results = service.mutate(client_customer_id=client_id, sync=True)
