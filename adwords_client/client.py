@@ -59,8 +59,6 @@ class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None, **kwargs):
         self._client = local()
         self.services = local()
-        self._client = None
-        self.services = {}
         self.table_models = {}
         self.min_id = 0
         self.map_function = map_function or multiprocessing_map
