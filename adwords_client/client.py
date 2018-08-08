@@ -8,6 +8,7 @@ import time
 import uuid
 import yaml
 from collections import Mapping
+from threading import local
 from io import StringIO
 from math import floor, isfinite
 from multiprocessing import Pool
@@ -56,6 +57,8 @@ def multiprocessing_map(*args, **kwargs):
 
 class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None, **kwargs):
+        self._client = local()
+        self.services = local()
         self._client = None
         self.services = {}
         self.table_models = {}
@@ -71,12 +74,12 @@ class AdWords:
 
     @property
     def client(self):
-        if not self._client:
+        if not self._client.__dict__:
             config.configure()
             client_settings = config.FIELDS.copy()
             client_settings.update(self.extra_options)
-            self._client = adwords_client_factory(client_settings)
-        return self._client
+            self._client.__dict__['client'] = adwords_client_factory(client_settings)
+        return self._client.__dict__['client']
 
     @property
     def operations(self):
@@ -86,9 +89,9 @@ class AdWords:
         return self._operations_buffer
 
     def service(self, service_name):
-        if service_name not in self.services:
-            self.services[service_name] = getattr(adwords_api, service_name)(self.client)
-        return self.services[service_name]
+        if service_name not in self.services.__dict__:
+            self.services.__dict__[service_name] = getattr(adwords_api, service_name)(self.client)
+        return self.services.__dict__[service_name]
 
     def get_file(self, name, *args, **kwargs):
         if name not in self._open_files:
