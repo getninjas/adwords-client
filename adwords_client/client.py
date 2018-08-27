@@ -426,8 +426,17 @@ class AdWords:
             'fields': ['Name', 'CustomerId']
         }
         mcs = self.service('ManagedCustomerService')
-        return {account['name']: account for account in
-                mcs.get(operation_builder(internal_operation, sync=True), client_id)}
+        result_paginator = mcs.get(operation_builder(internal_operation, sync=True), client_id)
+        result = {}
+        while result_paginator.more_pages():
+            page = result_paginator.get_next_page()
+            if 'entries' in page:
+                for account in page['entries']:
+                    result.setdefault(account['customerId'], {})['entry'] = account
+            if 'links' in page:
+                for account in page['links']:
+                    result.setdefault(account['clientCustomerId'], {}).setdefault('link', []).append(account)
+        return result
 
     def get_batchjobs(self, client_id=None):
         logger.info('Getting batchjobs for account %s...', client_id or self.client.client_customer_id)
