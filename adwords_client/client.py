@@ -3,11 +3,11 @@ import datetime
 import inspect
 import json
 import logging
-import os
 import time
 import uuid
 import yaml
 from collections import Mapping
+from threading import local
 from io import StringIO
 from math import floor, isfinite
 from multiprocessing import Pool
@@ -56,27 +56,39 @@ def multiprocessing_map(*args, **kwargs):
 
 class AdWords:
     def __init__(self, workdir=None, storage=None, map_function=None, **kwargs):
-        self._client = None
-        self.services = {}
-        self.table_models = {}
-        self.min_id = 0
         self.map_function = map_function or multiprocessing_map
         if storage:
             self.storage = storage
         else:
             self.storage = storages.FilesystemStorage(workdir) if workdir else storages.TemporaryFilesystemStorage()
-        self._open_files = {}
-        self._operations_buffer = None
         self.extra_options = kwargs
+        self.min_id = 0
+        self._reset()
+
+    def _reset(self):
+        self._local = None
+        self._operations_buffer = None
+        # If this is a django storage, we want to reset the storage and lazy object before fork
+        if hasattr(self.storage, '_wrapped'):
+            # resets the wrapped object in the LazyObject
+            # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
+            # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
+            self.storage.__init__()
+
+    @property
+    def local(self):
+        if not self._local:
+            self._local = local()
+        return self._local
 
     @property
     def client(self):
-        if not self._client:
+        if not getattr(self.local, 'client', None):
             config.configure()
             client_settings = config.FIELDS.copy()
             client_settings.update(self.extra_options)
-            self._client = adwords_client_factory(client_settings)
-        return self._client
+            self.local.client = adwords_client_factory(client_settings)
+        return self.local.client
 
     @property
     def operations(self):
@@ -85,19 +97,31 @@ class AdWords:
             logger.debug('Created temporary buffer file %s', self._operations_buffer.name)
         return self._operations_buffer
 
+    @property
+    def services(self):
+        if not getattr(self.local, 'services', None):
+            self.local.services = {}
+        return self.local.services
+
+    @property
+    def open_files(self):
+        if not getattr(self.local, 'open_files', None):
+            self.local.open_files = {}
+        return self.local.open_files
+
     def service(self, service_name):
         if service_name not in self.services:
             self.services[service_name] = getattr(adwords_api, service_name)(self.client)
         return self.services[service_name]
 
     def get_file(self, name, *args, **kwargs):
-        if name not in self._open_files:
-            self._open_files[name] = self.storage.open(name, *args, **kwargs)
-        return self._open_files[name]
+        if name not in self.open_files:
+            self.open_files[name] = self.storage.open(name, *args, **kwargs)
+        return self.open_files[name]
 
     def flush_files(self):
-        while self._open_files:
-            _, file = self._open_files.popitem()
+        while self.open_files:
+            _, file = self.open_files.popitem()
             file.flush()
             file.close()
 
@@ -257,9 +281,9 @@ class AdWords:
             file_handler.close()
 
         with ThreadPoolExecutor() as executor:
-            executor.map(_close_file, self._open_files.values())
+            executor.map(_close_file, self.open_files.values())
 
-        self._open_files.clear()
+        self.open_files.clear()
         return operations_folder
 
     def _batch_operations(self, file_name):
@@ -369,13 +393,6 @@ class AdWords:
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
     def execute_operations(self, operations_folder=None, sync=False, force_all=False):
-        """
-        Possible columns in the table:
-
-        :param table_name:
-        :param batchlog_table:
-        :return:
-        """
         if sync:
             return self._sync_operations()
         else:
@@ -397,15 +414,7 @@ class AdWords:
                     # avoid overwriting the result file value
                     files[data_file] = files.get(data_file) or result_file
             selected_files = [path.join(operations_folder, f) for f, data in files.items() if not data or force_all]
-            self._client = None
-            self._operations_buffer = None
-            self.services = {}
-            # If this is a django storage, we want to reset the storage and lazy object before fork
-            if hasattr(self.storage, '_wrapped'):
-                # resets the wrapped object in the LazyObject
-                # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
-                # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
-                self.storage.__init__()
+            self._reset()
             logger.info('Applyting map function to operation files...')
             return list(self.map_function(self._batch_operations, selected_files))
 
