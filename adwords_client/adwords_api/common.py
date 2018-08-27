@@ -124,6 +124,7 @@ class PagedResult(BaseResult):
         return self.current_index < self.result['totalNumEntries']
 
     def __iter__(self):
+        entries_exist = True
         while entries_exist and self.more_pages():
             result = self.get_next_page()
             entries_exist = 'entries' in result
