@@ -101,23 +101,37 @@ class SimpleReturnValue(BaseResult):
 
 
 class PagedResult(BaseResult):
+    def __init__(self, callback, parameters):
+        super().__init__(callback, parameters)
+        self.start_index = self.callback_parameters['paging']['startIndex']
+        self.page_size = self.callback_parameters['paging']['numberResults']
+        self.current_index = 0
+        self._reset()
+
+    def _reset(self):
+        self.current_index = self.start_index
+        self.result = None
+
+    def get_next_page(self):
+        self.callback_parameters['paging']['startIndex'] = self.current_index
+        self.result = self.callback(self.callback_parameters)
+        self.current_index += self.page_size
+        return self.result
+
+    def more_pages(self):
+        if self.result is None:
+            return True
+        return self.current_index < self.result['totalNumEntries']
+
     def __iter__(self):
-        start_index = self.callback_parameters['paging']['startIndex']
-        original_start_index = start_index
-        page_size = self.callback_parameters['paging']['numberResults']
-        more_pages = True
-        while more_pages:
-            self.result = self.callback(self.callback_parameters)
-            if 'entries' in self.result:
-                for entry in self.result['entries']:
+        entries_exist = True
+        while entries_exist and self.more_pages():
+            result = self.get_next_page()
+            entries_exist = 'entries' in result
+            if entries_exist:
+                for entry in result['entries']:
                     yield entry
-            else:
-                self.callback_parameters['paging']['startIndex'] = original_start_index
-                raise StopIteration
-            start_index += page_size
-            self.callback_parameters['paging']['startIndex'] = start_index
-            more_pages = start_index < self.result['totalNumEntries']
-        self.callback_parameters['paging']['startIndex'] = original_start_index
+        self._reset()
         raise StopIteration
 
 
@@ -151,7 +165,7 @@ class BaseService:
             operation = operation[0]
         else:
             raise RuntimeError('The operation object is empty')
-        yield from self.ResultProcessor(self.service.get, operation)
+        return self.ResultProcessor(self.service.get, operation)
 
     def mutate(self, client_customer_id=None, sync=None):
         if client_customer_id:
