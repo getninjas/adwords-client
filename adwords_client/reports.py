@@ -84,6 +84,7 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs):
                 'Conversions',
                 'Cost',
                 'Status',
+                'CombinedApprovalStatus',
                 'CreativeUrlCustomParameters',
                 'CreativeTrackingUrlTemplate',
                 'CreativeDestinationUrl',
