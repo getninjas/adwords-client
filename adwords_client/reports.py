@@ -288,7 +288,7 @@ def get_budget_report(
                 'ExternalCustomerId',  # The Customer ID.
                 'BudgetId',
                 'BudgetName',
-                'DeliveryMethod'
+                'DeliveryMethod',
                 'BudgetReferenceCount',  # The number of campaigns actively using the budget.
                 'Amount',  # The daily budget
                 'IsBudgetExplicitlyShared',
