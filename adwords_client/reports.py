@@ -114,8 +114,9 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs):
 
 
 def get_keywords_report(client, customer_id, *args, **kwargs):
-    exclude_fields = ['ConversionTypeName']
-    exclude_terms = ['Significance']
+    exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
+    exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
+    include_fields = kwargs.pop('include_fields', [])
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -155,7 +156,7 @@ def get_keywords_report(client, customer_id, *args, **kwargs):
         exclude_fields,
         exclude_terms,
         ['Segment'],
-        [],
+        include_fields,
         *args, **kwargs
     )
     return report
@@ -221,6 +222,7 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                 'Conversions',
                 'Cost',
                 'Status',
+                'ServingStatus',
                 'BiddingStrategyType',
                 'SearchImpressionShare',
             ]
@@ -286,6 +288,7 @@ def get_budget_report(
                 'ExternalCustomerId',  # The Customer ID.
                 'BudgetId',
                 'BudgetName',
+                'DeliveryMethod'
                 'BudgetReferenceCount',  # The number of campaigns actively using the budget.
                 'Amount',  # The daily budget
                 'IsBudgetExplicitlyShared',
