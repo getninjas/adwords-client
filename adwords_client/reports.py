@@ -222,7 +222,6 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                 'Conversions',
                 'Cost',
                 'Status',
-                'ServingStatus',
                 'BiddingStrategyType',
                 'SearchImpressionShare',
             ]
@@ -337,6 +336,7 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
                 'Labels',
                 'ValuePerAllConversion',
                 'ValuePerConversion',
+                'AdRotationMode',
             ]
     report = client.get_report(
         'ADGROUP_PERFORMANCE_REPORT',
