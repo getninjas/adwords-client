@@ -52,6 +52,7 @@ def _create_campaign():
             'adgroup_id': -2,
             'adgroup_name': 'API test adgroup',
             'cpc_bid': 13.37,
+            'status': 'PAUSED',
         }
     )
     client.insert(
@@ -62,7 +63,7 @@ def _create_campaign():
             'adgroup_id': -2,
             'text': 'my search term',
             'keyword_match_type': 'broad',
-            'status': 'paused',
+            'status': 'PAUSED',
             'cpc_bid': 13.37,
         }
     )
