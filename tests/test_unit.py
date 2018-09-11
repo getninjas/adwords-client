@@ -42,6 +42,7 @@ def _create_campaign():
             'campaign_name': 'API test campaign',
             'locations': [1001773, 1001768],  # Sao Paulo, Sao Caetano
             'languages': [1014, 1000],  # Portuguese, English
+            'status': 'PAUSED',
         }
     )
     client.insert(
@@ -62,7 +63,7 @@ def _create_campaign():
             'adgroup_id': -2,
             'text': 'my search term',
             'keyword_match_type': 'broad',
-            'status': 'paused',
+            'status': 'PAUSED',
             'cpc_bid': 13.37,
         }
     )
