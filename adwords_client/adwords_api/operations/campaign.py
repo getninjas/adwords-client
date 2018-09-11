@@ -22,7 +22,7 @@ def campaign_operation(campaign_id: 'Long' = None,
         },
     }
     if status:
-        operation['operand']['status'] = status
+        operation['operand']['status'] = status.upper()
     if campaign_name:
         operation['operand']['name'] = campaign_name
     # Note that only the budgetId is required

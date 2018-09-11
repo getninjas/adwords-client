@@ -22,7 +22,7 @@ def adgroup_operation(campaign_id: 'Long' = None,
         operation['operand']['name'] = adgroup_name
 
     if status:
-        operation['operand']['status'] = status
+        operation['operand']['status'] = status.upper()
 
     if status != 'REMOVED' and cpc_bid:
         bidding_strategy = _build_new_bidding_strategy_configuration()
