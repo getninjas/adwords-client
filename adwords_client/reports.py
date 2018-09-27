@@ -351,8 +351,11 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
 
 
 def get_campaigns_location_report(client, customer_id, *args, **kwargs):
+    include_fields = kwargs.pop('include_fields', [])
+    exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
+    exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
     exclude_fields = []
-    exclude_terms = ['Significance']
+
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -377,8 +380,8 @@ def get_campaigns_location_report(client, customer_id, *args, **kwargs):
         customer_id,
         exclude_fields,
         exclude_terms,
-        ['Segment'],
-        [],
+        exclude_behavior,
+        include_fields,
         *args, **kwargs
     )
     return report
