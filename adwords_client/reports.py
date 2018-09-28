@@ -224,6 +224,7 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                 'Status',
                 'BiddingStrategyType',
                 'SearchImpressionShare',
+                'AllConversionValue',
             ]
     report = client.get_report(
         'CAMPAIGN_PERFORMANCE_REPORT',
