@@ -224,6 +224,7 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                 'Status',
                 'BiddingStrategyType',
                 'SearchImpressionShare',
+                'AllConversionValue',
             ]
     report = client.get_report(
         'CAMPAIGN_PERFORMANCE_REPORT',
@@ -374,6 +375,7 @@ def get_campaigns_location_report(client, customer_id, *args, **kwargs):
                 'Clicks',
                 'Conversions',
                 'Cost',
+                'AllConversionValue',
             ]
     report = client.get_report(
         'CAMPAIGN_LOCATION_TARGET_REPORT',
