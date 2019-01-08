@@ -3,11 +3,11 @@ import datetime
 import inspect
 import json
 import logging
-import os
 import time
 import uuid
 import yaml
 from collections import Mapping
+from threading import local
 from io import StringIO
 from math import floor, isfinite
 from multiprocessing import Pool
@@ -55,25 +55,40 @@ def multiprocessing_map(*args, **kwargs):
 
 
 class AdWords:
-    def __init__(self, workdir=None, storage=None, map_function=None):
-        self._client = None
-        self.services = {}
-        self.table_models = {}
-        self.min_id = 0
+    def __init__(self, workdir=None, storage=None, map_function=None, **kwargs):
         self.map_function = map_function or multiprocessing_map
         if storage:
             self.storage = storage
         else:
             self.storage = storages.FilesystemStorage(workdir) if workdir else storages.TemporaryFilesystemStorage()
-        self._open_files = {}
+        self.extra_options = kwargs
+        self.min_id = 0
+        self._reset()
+
+    def _reset(self):
+        self._local = None
         self._operations_buffer = None
+        # If this is a django storage, we want to reset the storage and lazy object before fork
+        if hasattr(self.storage, '_wrapped'):
+            # resets the wrapped object in the LazyObject
+            # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
+            # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
+            self.storage.__init__()
+
+    @property
+    def local(self):
+        if not self._local:
+            self._local = local()
+        return self._local
 
     @property
     def client(self):
-        if not self._client:
+        if not getattr(self.local, 'client', None):
             config.configure()
-            self._client = adwords_client_factory(config.FIELDS)
-        return self._client
+            client_settings = config.FIELDS.copy()
+            client_settings.update(self.extra_options)
+            self.local.client = adwords_client_factory(client_settings)
+        return self.local.client
 
     @property
     def operations(self):
@@ -82,19 +97,31 @@ class AdWords:
             logger.debug('Created temporary buffer file %s', self._operations_buffer.name)
         return self._operations_buffer
 
+    @property
+    def services(self):
+        if not getattr(self.local, 'services', None):
+            self.local.services = {}
+        return self.local.services
+
+    @property
+    def open_files(self):
+        if not getattr(self.local, 'open_files', None):
+            self.local.open_files = {}
+        return self.local.open_files
+
     def service(self, service_name):
         if service_name not in self.services:
             self.services[service_name] = getattr(adwords_api, service_name)(self.client)
         return self.services[service_name]
 
     def get_file(self, name, *args, **kwargs):
-        if name not in self._open_files:
-            self._open_files[name] = self.storage.open(name, *args, **kwargs)
-        return self._open_files[name]
+        if name not in self.open_files:
+            self.open_files[name] = self.storage.open(name, *args, **kwargs)
+        return self.open_files[name]
 
     def flush_files(self):
-        while self._open_files:
-            _, file = self._open_files.popitem()
+        while self.open_files:
+            _, file = self.open_files.popitem()
             file.flush()
             file.close()
 
@@ -254,9 +281,9 @@ class AdWords:
             file_handler.close()
 
         with ThreadPoolExecutor() as executor:
-            executor.map(_close_file, self._open_files.values())
+            executor.map(_close_file, self.open_files.values())
 
-        self._open_files.clear()
+        self.open_files.clear()
         return operations_folder
 
     def _batch_operations(self, file_name):
@@ -303,7 +330,7 @@ class AdWords:
             'campaign_callout': 'CampaignExtensionSettingService',
             'campaign_structured_snippet': 'CampaignExtensionSettingService',
             'account_label': 'AccountLabelService',
-            'campaign_language': 'CampaignCriterionService'
+            'campaign_language': 'CampaignCriterionService',
         }
 
         if internal_operation['object_type'] == 'attach_label':
@@ -316,6 +343,12 @@ class AdWords:
             elif 'customer_id' in internal_operation:
                 return object_type_service_mapper.get('managed_customer')
 
+        if internal_operation['object_type'] == 'offline_conversion':
+            if internal_operation.get('operator', None) in ['SET', 'REMOVE']:
+                return 'OfflineConversionAdjustmentFeedService'
+            else:
+                return 'OfflineConversionFeedService'
+
         try:
             return object_type_service_mapper.get(internal_operation['object_type'])
         except KeyError:
@@ -323,46 +356,43 @@ class AdWords:
             raise
 
     def _sync_operations(self):
-        previous_client_id = None
-        previous_service_name = None
         operation_builder = OperationsBuilder()
         results = []
+        errors = []
+        number_of_operations = 0
+        max_operations = 1000
+        service = None
+        client_id = None
         for internal_operation in self._read_buffer():
             client_id = internal_operation['client_id']
             service_name = self._get_service_from_object_type(internal_operation)
-            for adwords_operation in operation_builder(internal_operation):
-                service = self.service(service_name)
-                if previous_client_id is not None:
-                    previous_service = self.service(previous_service_name)
-                    if client_id != previous_client_id or service_name != previous_service_name:
-                        # time to upload
-                        results.extend(previous_service.mutate(previous_client_id, sync=True))
-                        # prepare for next upload
+            service = self.service(service_name)
+            if not number_of_operations:
+                service.prepare_mutate(sync=True)
+            for adwords_operation in operation_builder(internal_operation, sync=True):
+                if adwords_operation:
+                    number_of_operations += 1
+                    service.helper.add_operation(adwords_operation)
+                    if number_of_operations > 0 and number_of_operations % max_operations == 0:
+                        partial_results = service.mutate(client_customer_id=client_id, sync=True)
+                        get_errors = getattr(partial_results, "get_errors", None)
+                        partial_errors = get_errors() if callable(get_errors) else []
+                        results.extend(partial_results)
+                        errors.extend(partial_errors)
                         service.prepare_mutate(sync=True)
-                else:
-                    # this runs on the first loop
-                    service.prepare_mutate(sync=True)
-
-                service.helper.add_operation(adwords_operation)
-                previous_client_id = client_id
-                previous_service_name = service_name
-        if previous_service_name and previous_client_id:
-            previous_service = self.service(previous_service_name)
-            results.extend(previous_service.mutate(previous_client_id, sync=True))
-
+        if service:
+            if service.helper.operations:
+                partial_results = service.mutate(client_customer_id=client_id, sync=True)
+                get_errors = getattr(partial_results, "get_errors", None)
+                partial_errors = get_errors() if callable(get_errors) else []
+                results.extend(partial_results)
+                errors.extend(partial_errors)
         self._operations_buffer = None
-        return results
+        return results, errors
 
     # TODO: this method should instantiate a new class (maybe SyncOperation) and transform the internal functions
     # into instance methods. Also, separate the treatment for each "object_type" into a new method as well.
     def execute_operations(self, operations_folder=None, sync=False, force_all=False):
-        """
-        Possible columns in the table:
-
-        :param table_name:
-        :param batchlog_table:
-        :return:
-        """
         if sync:
             return self._sync_operations()
         else:
@@ -384,17 +414,9 @@ class AdWords:
                     # avoid overwriting the result file value
                     files[data_file] = files.get(data_file) or result_file
             selected_files = [path.join(operations_folder, f) for f, data in files.items() if not data or force_all]
-            self._client = None
-            self._operations_buffer = None
-            self.services = {}
-            # If this is a django storage, we want to reset the storage and lazy object before fork
-            if hasattr(self.storage, '_wrapped'):
-                # resets the wrapped object in the LazyObject
-                # For some strange reason, there is an empty object() that is used to mark the emptyness of the storage
-                # https://github.com/django/django/blob/4c599ece57fa009cf3615f09497f81bfa6a585a7/django/utils/functional.py#L231
-                self.storage.__init__()
+            self._reset()
             logger.info('Applyting map function to operation files...')
-            self.map_function(self._batch_operations, selected_files)
+            return list(self.map_function(self._batch_operations, selected_files))
 
     def get_accounts(self, client_id=None):
         logger.info('Getting accounts for client_id %s...', client_id or self.client.client_customer_id)
@@ -404,8 +426,17 @@ class AdWords:
             'fields': ['Name', 'CustomerId']
         }
         mcs = self.service('ManagedCustomerService')
-        return {account['name']: account for account in
-                mcs.get(operation_builder(internal_operation, sync=True), client_id)}
+        result_paginator = mcs.get(operation_builder(internal_operation, sync=True), client_id)
+        result = {}
+        while result_paginator.more_pages():
+            page = result_paginator.get_next_page()
+            if 'entries' in page:
+                for account in page['entries']:
+                    result.setdefault(account['customerId'], {})['entry'] = account
+            if 'links' in page:
+                for account in page['links']:
+                    result.setdefault(account['clientCustomerId'], {}).setdefault('link', []).append(account)
+        return result
 
     def get_batchjobs(self, client_id=None):
         logger.info('Getting batchjobs for account %s...', client_id or self.client.client_customer_id)

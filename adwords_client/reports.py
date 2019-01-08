@@ -84,6 +84,7 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs):
                 'Conversions',
                 'Cost',
                 'Status',
+                'CombinedApprovalStatus',
                 'CreativeUrlCustomParameters',
                 'CreativeTrackingUrlTemplate',
                 'CreativeDestinationUrl',
@@ -113,8 +114,9 @@ def get_ad_performance_report(client, customer_id, *args, **kwargs):
 
 
 def get_keywords_report(client, customer_id, *args, **kwargs):
-    exclude_fields = ['ConversionTypeName']
-    exclude_terms = ['Significance']
+    exclude_fields = kwargs.pop('exclude_fields', ['ConversionTypeName'])
+    exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
+    include_fields = kwargs.pop('include_fields', [])
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -145,6 +147,8 @@ def get_keywords_report(client, customer_id, *args, **kwargs):
                 'PostClickQualityScore',
                 'SearchPredictedCtr',
                 'QualityScore',
+                'ValuePerAllConversion',
+                'ValuePerConversion',
             ]
     report = client.get_report(
         'KEYWORDS_PERFORMANCE_REPORT',
@@ -152,7 +156,7 @@ def get_keywords_report(client, customer_id, *args, **kwargs):
         exclude_fields,
         exclude_terms,
         ['Segment'],
-        [],
+        include_fields,
         *args, **kwargs
     )
     return report
@@ -220,6 +224,7 @@ def get_campaigns_report(client, customer_id, *args, **kwargs):
                 'Status',
                 'BiddingStrategyType',
                 'SearchImpressionShare',
+                'AllConversionValue',
             ]
     report = client.get_report(
         'CAMPAIGN_PERFORMANCE_REPORT',
@@ -283,6 +288,7 @@ def get_budget_report(
                 'ExternalCustomerId',  # The Customer ID.
                 'BudgetId',
                 'BudgetName',
+                'DeliveryMethod',
                 'BudgetReferenceCount',  # The number of campaigns actively using the budget.
                 'Amount',  # The daily budget
                 'IsBudgetExplicitlyShared',
@@ -329,6 +335,9 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
                 'SearchImpressionShare',
                 'CpcBid',
                 'Labels',
+                'ValuePerAllConversion',
+                'ValuePerConversion',
+                'AdRotationMode',
             ]
     report = client.get_report(
         'ADGROUP_PERFORMANCE_REPORT',
@@ -343,8 +352,11 @@ def get_adgroups_report(client, customer_id, *args, **kwargs):
 
 
 def get_campaigns_location_report(client, customer_id, *args, **kwargs):
+    include_fields = kwargs.pop('include_fields', [])
+    exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
+    exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
     exclude_fields = []
-    exclude_terms = ['Significance']
+
     use_fields = kwargs.pop('fields', False)
     if use_fields:
         try:
@@ -363,14 +375,15 @@ def get_campaigns_location_report(client, customer_id, *args, **kwargs):
                 'Clicks',
                 'Conversions',
                 'Cost',
+                'AllConversionValue',
             ]
     report = client.get_report(
         'CAMPAIGN_LOCATION_TARGET_REPORT',
         customer_id,
         exclude_fields,
         exclude_terms,
-        ['Segment'],
-        [],
+        exclude_behavior,
+        include_fields,
         *args, **kwargs
     )
     return report

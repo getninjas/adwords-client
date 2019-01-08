@@ -2,7 +2,7 @@ from .utils import _build_new_bidding_strategy_configuration, _build_money, _get
 
 
 def sitelink_setting_for_campaign_operation(campaign_id: 'Long' = None,
-                                    sitelinks_configuration: 'String[]' = None,
+                                    sitelinks_configuration: 'StringList' = None,
                                     operator: 'String' = 'ADD',
                                     **kwargs):
 
@@ -29,7 +29,7 @@ def sitelink_setting_for_campaign_operation(campaign_id: 'Long' = None,
 
 
 def callout_setting_for_campaign_operation(campaign_id: 'Long' = None,
-                                    callout_text_list: 'String[]' = None,
+                                    callout_text_list: 'StringList' = None,
                                     operator: 'String' = 'ADD',
                                     **kwargs):
     operation = {
@@ -54,7 +54,7 @@ def callout_setting_for_campaign_operation(campaign_id: 'Long' = None,
 
 
 def structured_snippet_setting_for_campaign_operation(campaign_id: 'Long' = None,
-                                               snippets_configuration: 'String[]' = None,
+                                               snippets_configuration: 'StringList' = None,
                                                operator: 'String' = 'ADD',
                                                **kwargs):
     operation = {

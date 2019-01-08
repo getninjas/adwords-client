@@ -36,6 +36,6 @@ def configure(path=None, **kwargs):
             FIELDS[key] = value
         if not is_set():
             for key in FIELDS:
-                FIELDS[key] = os.environ.get(key.upper())
+                FIELDS[key] = os.environ.get(key.upper(), FIELDS[key])
             if not is_set():
                 configure_from_files(path)

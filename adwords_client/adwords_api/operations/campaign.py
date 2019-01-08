@@ -4,9 +4,9 @@ from .utils import _build_new_bidding_strategy_configuration, _build_money, _get
 def campaign_operation(campaign_id: 'Long' = None,
                        campaign_name: 'String' = None,
                        budget_id: 'Long' = None,
-                       status: 'String' = 'PAUSED',
+                       status: 'String' = None,
                        advertising_channel: 'String' = 'SEARCH',
-                       network_setting: 'String[]' = None,
+                       network_setting: 'StringList' = None,
                        ad_serving_optimization_status: 'String' = None,
                        positive_geo_target_type: 'String' = None,
                        operator: 'String' = 'ADD',
@@ -19,15 +19,10 @@ def campaign_operation(campaign_id: 'Long' = None,
             # https://developers.google.com/adwords/api/docs/reference/v201705/CampaignService.Campaign
             'xsi_type': 'Campaign',
             'id': campaign_id,
-
-            ## From: https://developers.google.com/adwords/api/docs/samples/python/campaign-management#add-complete-campaigns-using-batch-jobs
-            # 'advertisingChannelType': 'SEARCH',
-            # Recommendation: Set the campaign to PAUSED when creating it to
-            # stop the ads from immediately serving. Set to ENABLED once
-            # you've added targeting and the ads are ready to serve.
-            'status': status,
         },
     }
+    if status:
+        operation['operand']['status'] = status.upper()
     if campaign_name:
         operation['operand']['name'] = campaign_name
     # Note that only the budgetId is required
@@ -81,6 +76,7 @@ def add_campaign_language(campaign_id: 'Long' = None,
 def add_campaign_location(campaign_id: 'Long' = None,
                           location_id: 'Long' = None,
                           operator: 'String' = 'ADD',
+                          bid_modifier: 'Double' = None,
                           **kwargs):
     operation = {
         # https://developers.google.com/adwords/api/docs/reference/v201708/CampaignCriterionService.CampaignCriterionOperation
