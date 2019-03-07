@@ -331,6 +331,8 @@ class AdWords:
             'campaign_structured_snippet': 'CampaignExtensionSettingService',
             'account_label': 'AccountLabelService',
             'campaign_language': 'CampaignCriterionService',
+            'user_list': 'AdwordsUserListService',
+            'user_list_member': 'AdwordsUserListService',
         }
 
         if internal_operation['object_type'] == 'attach_label':

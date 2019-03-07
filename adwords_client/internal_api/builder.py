@@ -2,7 +2,8 @@ import logging
 from .mappers import cast_to_adwords
 from ..adwords_api.operations import (campaign, adgroup, keyword, ad, label, campaign_shared_set, shared_criterion,
                                       shared_set, managed_customer, budget_order, attach_label,
-                                      campaign_extensions_setting, campaign_criterion, utils, offline_conversion_feed)
+                                      campaign_extensions_setting, campaign_criterion, utils, offline_conversion_feed,
+                                      user_list)
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,26 @@ class OperationsBuilder:
                 yield from self._parse_batch_job_operation(operation)
             elif object_type == 'offline_conversion' and sync:
                 yield from self._parse_offline_conversion_operation(operation)
+            elif object_type == 'user_list' and sync:
+                yield from self._parse_user_list(operation)
+            elif object_type == 'user_list_member' and sync:
+                yield from self._parse_user_list_member(operation)
             else:
                 logger.warning('Operation not recognized: {}', operation)
                 yield None
+
+    def _parse_user_list(self, operation):
+        if 'fields' in operation or 'default_fields' in operation:
+            yield user_list.get_user_list_operation(**operation)
+        else:
+            yield user_list.user_list_operation(**operation)
+
+    def _parse_user_list_member(self, operation):
+        if 'query' in operation:
+            yield operation
+        else:
+            yield user_list.list_members_operation(**operation)
+
 
     def _parse_offline_conversion_operation(self, operation):
         if 'fields' in operation or 'default_fields' in operation:
