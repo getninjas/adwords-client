@@ -12,3 +12,4 @@ from .campaign_extension_setting_service import CampaignExtensionSettingService
 from .campaign_criterion_service import CampaignCriterionService
 from .offline_conversion_feed_service import OfflineConversionFeedService
 from .offline_conversion_adjustment_feed_service import OfflineConversionAdjustmentFeedService
+from .adwords_user_list_service import AdwordsUserListService

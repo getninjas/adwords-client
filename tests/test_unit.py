@@ -1,5 +1,6 @@
 import logging
 from pprint import pprint
+import hashlib
 
 from adwords_client.client import AdWords
 from adwords_client import reports
@@ -1095,6 +1096,80 @@ def _build_operations_with_default_fields():
     assert expected_get_adwords_operation == get_adwords_operation
 
 
+def _build_user_list_operation():
+    operation_builder = OperationsBuilder()
+    client_id = 1234567890
+    name = 'Test UserList 9'
+
+    add_list_internal_operation = {
+        'object_type': 'user_list',
+        'client_id': client_id,
+        'name': name,
+    }
+
+    user_list_id = 123
+    members = [
+        {'email': 'user1@gmail.com', 'phone_number': '1234567898', 'mobile_id': 123},
+        {'email': 'user2@gmail.com', 'phone_number': '1234562898', 'first_name': 'First Name', 'last_name': 'Last Name', 'country_code': 'BR', 'zip_code': 123},
+        {'email': 'user3@gmail.com', 'phone_number': '1234562898', 'first_name': 'First Name', 'last_name': 'Last Name',
+         'country_code': 'BR'}
+    ]
+
+    add_members_internal_operation = {
+        'object_type': 'user_list_member',
+        'client_id': client_id,
+        'user_list_id': user_list_id,
+        'members': members,
+    }
+
+    add_list_adwords_operation = next(operation_builder(add_list_internal_operation, sync=True))
+    expected_add_list_adwords_operation = {
+        'xsi_type': 'UserListOperation',
+        'operator': 'ADD',
+        'operand': {
+            'xsi_type': 'CrmBasedUserList',
+            'status': 'OPEN',
+            'isEligibleForSearch': True,
+            'isEligibleForDisplay': True,
+            'membershipLifeSpan': 10000,
+            'name': 'Test UserList 9',
+            'uploadKeyType': 'CONTACT_INFO',
+            'dataSourceType': 'FIRST_PARTY'
+        }
+    }
+    assert add_list_adwords_operation == expected_add_list_adwords_operation
+
+    add_list_members_adwords_operation = next(operation_builder(add_members_internal_operation, sync=True))
+
+    expected_add_members_adwords_operation = {
+        'xsi_type': 'MutateMembersOperation',
+        'operator': 'ADD',
+        'operand': {
+            'xsi_type': 'MutateMembersOperand',
+            'userListId': add_members_internal_operation['user_list_id'],
+            'removeAll': False,
+            'membersList': [{
+                'hashedEmail': hashlib.sha256(add_members_internal_operation['members'][0]['email'].strip().lower().encode()).hexdigest(),
+                'mobileId': add_members_internal_operation['members'][0]['mobile_id'],
+                'hashedPhoneNumber': hashlib.sha256(add_members_internal_operation['members'][0]['phone_number'].strip().lower().encode()).hexdigest()
+            }, {
+                'hashedEmail': hashlib.sha256(add_members_internal_operation['members'][1]['email'].strip().lower().encode()).hexdigest(),
+                'hashedPhoneNumber': hashlib.sha256(add_members_internal_operation['members'][1]['phone_number'].strip().lower().encode()).hexdigest(),
+                'addressInfo': {
+                    'hashedFirstName': hashlib.sha256(add_members_internal_operation['members'][1]['first_name'].strip().lower().encode()).hexdigest(),
+                    'hashedLastName': hashlib.sha256(add_members_internal_operation['members'][1]['last_name'].strip().lower().encode()).hexdigest(),
+                    'countryCode': add_members_internal_operation['members'][1]['country_code'],
+                    'zipCode': add_members_internal_operation['members'][1]['zip_code']
+                }
+            }, {
+                'hashedEmail': hashlib.sha256(add_members_internal_operation['members'][2]['email'].strip().lower().encode()).hexdigest(),
+                'hashedPhoneNumber': hashlib.sha256(add_members_internal_operation['members'][2]['phone_number'].strip().lower().encode()).hexdigest()
+            }]}
+    }
+
+    assert add_list_members_adwords_operation == expected_add_members_adwords_operation
+
+
 def test_build_adwords_operations():
     _build_shared_set_operations()
     _build_budget_order_operations()
@@ -1111,6 +1186,7 @@ def test_build_adwords_operations():
     _build_operations_with_default_fields()
     _build_campaign_ad_schedule_operations()
     _build_offline_conversions_operations()
+    _build_user_list_operation()
 
 
 def _assert_jobs(jobs):

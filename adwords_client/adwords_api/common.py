@@ -70,7 +70,6 @@ class SyncReturnValue(BaseResult):
             self.result = self._upload_sync_operations(callback.mutate, regular_operations)
             self.operations_sent = regular_operations
 
-
     def _upload_sync_operations(self, callback, operations):
         fail_counter = 0
         done = False
@@ -86,6 +85,7 @@ class SyncReturnValue(BaseResult):
                     logger.error('Problem sync uploading the data, failure...')
                     raise e
                 logger.error('Problem sync uploading the data, retrying for the %s time...', fail_counter)
+                logger.error(str(e))
 
     def get_errors(self):
         if self.result and 'partialFailureErrors' in self.result:
