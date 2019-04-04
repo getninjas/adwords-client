@@ -16,7 +16,7 @@ logging.getLogger('zeep').setLevel(logging.WARNING)
 
 def _delete_campaigns():
     client = AdWords(workdir='./tests/generated_files')
-    new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"')
+    new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"', fields=True)
     for campaign in new_report_df:
         entry = {
             'object_type': 'campaign',
