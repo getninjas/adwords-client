@@ -14,121 +14,17 @@ logging.getLogger('suds').setLevel(logging.WARNING)
 logging.getLogger('zeep').setLevel(logging.WARNING)
 
 
-def _delete_campaigns():
-    client = AdWords(workdir='./tests/generated_files')
-    new_report_df = reports.get_campaigns_report(client, 7857288943, 'CampaignStatus != "REMOVED"', fields=True)
-    for campaign in new_report_df:
-        entry = {
-            'object_type': 'campaign',
-            'client_id': 7857288943,
-            'campaign_id': campaign['CampaignId'],
-            'campaign_name': 'API test campaign',
-            'operator': 'SET',
-            'status': 'REMOVED',
-        }
-        client.insert(entry)
-    operations_folder = client.split()
-    client.execute_operations(operations_folder)
-    return client.wait_jobs(operations_folder)
-
-
-def _create_campaign():
-    client = AdWords(workdir='./tests/generated_files')
-    client.insert(
-        {
-            'object_type': 'campaign',
-            'client_id': 7857288943,
-            'campaign_id': -1,
-            'budget': 1000,
-            'campaign_name': 'API test campaign',
-            'locations': [1001773, 1001768],  # Sao Paulo, Sao Caetano
-            'languages': [1014, 1000],  # Portuguese, English
-            'status': 'PAUSED',
-        }
-    )
-    client.insert(
-        {
-            'object_type': 'adgroup',
-            'client_id': 7857288943,
-            'campaign_id': -1,
-            'adgroup_id': -2,
-            'adgroup_name': 'API test adgroup',
-            'cpc_bid': 13.37,
-        }
-    )
-    client.insert(
-        {
-            'object_type': 'keyword',
-            'client_id': 7857288943,
-            'campaign_id': -1,
-            'adgroup_id': -2,
-            'text': 'my search term',
-            'keyword_match_type': 'broad',
-            'status': 'PAUSED',
-            'cpc_bid': 13.37,
-        }
-    )
-    client.insert(
-        {
-            'object_type': 'ad',
-            'client_id': 7857288943,
-            'campaign_id': -1,
-            'adgroup_id': -2,
-            'headline_part_1': 'Ad test',
-            'headline_part_2': 'my pretty test',
-            'description': 'This is my test ad',
-            'path_1': 'test',
-            'path_2': 'ad',
-            'final_urls': 'http://www.mytest.com/',
-            'final_mobile_urls': 'http://m.mytest.com/',
-        }
-    )
-    operations_folder = client.split()
-    client.execute_operations(operations_folder)
-    return client.wait_jobs(operations_folder)
-
 
 def _get_keywords_report(client=None):
     client = client or AdWords()
-    report_df = reports.get_keywords_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
+    report_df = reports.get_keywords_report(client, 2085592930, 'CampaignStatus = "PAUSED"', fields=True)
     return report_df
 
 
 def _get_adgroups_report(client=None):
     client = client or AdWords()
-    report_df = reports.get_adgroups_report(client, 7857288943, 'CampaignStatus = "PAUSED"', fields=True)
+    report_df = reports.get_adgroups_report(client, 2085592930, 'CampaignStatus = "PAUSED"', fields=True)
     return report_df
-
-
-def _adjust_bids():
-    client = AdWords(workdir='./tests/generated_files')
-
-    for keyword in _get_keywords_report(client):
-        entry = {
-            'object_type': 'keyword',
-            'cpc_bid': 4.20,
-            'client_id': keyword['ExternalCustomerId'],
-            'campaign_id': keyword['CampaignId'],
-            'adgroup_id': keyword['AdGroupId'],
-            'criteria_id': keyword['Id'],
-            'operator': 'SET',
-        }
-        client.insert(entry)
-
-    for adgroup in _get_adgroups_report(client):
-        entry = {
-            'object_type': 'adgroup',
-            'cpc_bid': 4.20,
-            'client_id': adgroup['ExternalCustomerId'],
-            'campaign_id': adgroup['CampaignId'],
-            'adgroup_id': adgroup['AdGroupId'],
-            'operator': 'SET',
-        }
-        client.insert(entry)
-
-    operations_folder = client.split()
-    client.execute_operations(operations_folder)
-    return client.wait_jobs(operations_folder)
 
 
 def _sync_operations():
@@ -136,7 +32,7 @@ def _sync_operations():
 
     get_internal_operation = {
         'object_type': 'shared_set',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['Name', 'SharedSetId', 'Type', 'Status'],
         'predicates': [
             ('Name', 'EQUALS', 'API Sync Test'),
@@ -147,7 +43,7 @@ def _sync_operations():
     for shared_set in shared_sets:
         client.insert({
             'object_type': 'shared_set',
-            'client_id': 7857288943,
+            'client_id': 2085592930,
             'shared_set_id': shared_set['sharedSetId'],
             'operator': 'REMOVE'
         })
@@ -156,7 +52,7 @@ def _sync_operations():
 
     client.insert({
         'object_type': 'shared_set',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'shared_set_name': 'API Sync Test',
         'shared_set_type': 'NEGATIVE_KEYWORDS',
     })
@@ -168,7 +64,7 @@ def _sync_operations():
     for shared_set in shared_sets:
         client.insert({
             'object_type': 'shared_set',
-            'client_id': 7857288943,
+            'client_id': 2085592930,
             'shared_set_id': shared_set['sharedSetId'],
             'operator': 'REMOVE'
         })
@@ -180,7 +76,7 @@ def _build_shared_set_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'shared_set',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['Name', 'SharedSetId', 'Type', 'Status'],
         'predicates': [
             ('Name', 'EQUALS', 'API Sync Test'),
@@ -226,7 +122,7 @@ def _build_budget_order_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'budget_order',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['BillingAccountId', 'PrimaryBillingId', 'Id', 'BillingAccountName'],
         'predicates': [
             ('billingAccountName', 'EQUALS', 'Billing Account Test'),
@@ -266,7 +162,7 @@ def _build_budget_order_operations():
 
     mutate_internal_operation = {
         'object_type': 'budget_order',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'billing_account_id': '1234-5678-9012-3456',
         'primary_billing_id': '1234-5678-9012',
         'start_date_time': start_date_time.isoformat(),
@@ -300,7 +196,7 @@ def _build_site_link_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'campaign_sitelink',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['CampaignId', 'Extensions'],
         'predicates': [
             ('CampaignId', 'EQUALS', 213213123),
@@ -407,7 +303,7 @@ def _build_structured_snipppet_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'campaign_structured_snippet',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['CampaignId', 'Extensions'],
         'predicates': [
             ('CampaignId', 'EQUALS', 213213123),
@@ -484,7 +380,7 @@ def _build_callout_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'campaign_callout',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['CampaignId', 'Extensions'],
         'predicates': [
             ('CampaignId', 'EQUALS', 213213123),
@@ -560,7 +456,7 @@ def _build_campaign_ad_schedule_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'campaign_ad_schedule',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['CampaignId'],
         'predicates': [
             ('CampaignId', 'EQUALS', 213213123),
@@ -704,7 +600,7 @@ def _build_shared_set_operations():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'shared_set',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'fields': ['Name', 'SharedSetId', 'Type', 'Status'],
         'predicates': [
             ('Name', 'EQUALS', 'API Sync Test'),
@@ -739,7 +635,7 @@ def _build_shared_set_operations():
 
     mutate_internal_operation = {
         'object_type': 'shared_set',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'shared_set_name': 'API Sync Test',
         'shared_set_type': 'NEGATIVE_KEYWORDS',
     }
@@ -1070,7 +966,7 @@ def _build_operations_with_default_fields():
     operation_builder = OperationsBuilder()
     get_internal_operation = {
         'object_type': 'campaign_ad_schedule',
-        'client_id': 7857288943,
+        'client_id': 2085592930,
         'default_fields': True
     }
     get_adwords_operation = next(operation_builder(get_internal_operation, sync=True))
@@ -1200,25 +1096,13 @@ def _assert_jobs(jobs):
 
 
 def test_client():
-    _assert_jobs(_delete_campaigns())
-    _assert_jobs(_create_campaign())
-    _assert_jobs(_adjust_bids())
     kw_report = _get_keywords_report()
-    assert kw_report[0]['CpcBid'] == 4.20
     adg_report = _get_adgroups_report()
-    assert adg_report[0]['CpcBid'] == 4.20
-    _assert_jobs(_delete_campaigns())
 
 
 def test_sync_operations():
     _sync_operations()
 
-
 def test_get_accounts():
     client = AdWords()
     client.get_accounts()
-
-
-def test_batchjobs():
-    client = AdWords()
-    list(client.get_batchjobs())
