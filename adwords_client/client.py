@@ -198,7 +198,8 @@ class AdWords:
                 for field in fields if report_csv[field]['Type'] in MAPPERS
             }
             if save_in_disk:
-                report = utils.save_report_in_disk(raw_report, fields, converter=converter)
+                file_name = utils.save_report_in_disk(raw_report, fields, converter=converter)
+                return file_name, fields
             else:
                 report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
                 report = list(report_iterator())
