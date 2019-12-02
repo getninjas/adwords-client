@@ -164,11 +164,14 @@ class AdWords:
                 raise ValueError('Every entry must have a "client_id" field.')
             self._write_buffer(entry)
 
+
+
     def get_report(self, report_type, customer_id, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
         logger.info('Getting %s...', report_type)
         simple_download = kwargs.pop('simple_download', False)
+        save_in_disk = kwargs.pop('save_in_disk', False)
         only_fields = kwargs.pop('fields', None)
         report_csv = common.get_report_csv(report_type)
         report_csv = dict((item['Name'], item) for item in csv.DictReader(StringIO(report_csv)))
@@ -188,6 +191,7 @@ class AdWords:
         report_stream = rd.report(*args, **kwargs)
 
         if simple_download:
+
             return report_stream, fields
         else:
             raw_report = utils.gunzip(report_stream)
@@ -196,7 +200,11 @@ class AdWords:
                 for field in fields if report_csv[field]['Type'] in MAPPERS
             }
             report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
-            report = list(report_iterator())
+
+            if save_in_disk:
+                report = utils.save_csv_in_disk(report_iterator)
+            else:
+                report = list(report_iterator())
             return report
 
     def log_batchjob(self, batchjob_service, file_name, comment=''):

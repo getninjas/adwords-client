@@ -8,6 +8,15 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 
+def save_csv_in_disk(report_iterator):
+    with tempfile.NamedTemporaryFile(mode='wb+', delete=False) as file:
+        for line in report_iterator:
+            file.write(bytearray(line))
+        file_name = file.name
+        file.close()
+    return file_name
+
+
 def gunzip(compressed_stream):
     with tempfile.NamedTemporaryFile(mode='wb+') as file:
         for line in compressed_stream:
