@@ -164,7 +164,6 @@ class AdWords:
                 raise ValueError('Every entry must have a "client_id" field.')
             self._write_buffer(entry)
 
-
     def get_report(self, report_type, customer_id, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
