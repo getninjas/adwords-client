@@ -8,12 +8,16 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 
-def save_csv_in_disk(report_iterator):
+def save_report_in_disk(data_stream, fields, converter=None):
+    if converter:
+        converter = [converter.get(field, lambda x: x) for field in fields]
+
     with tempfile.NamedTemporaryFile(mode='wb+', delete=False) as file:
-        for line in report_iterator:
-            file.write(bytearray(line))
-        file_name = file.name
-        file.close()
+        compressed_file = gzip.GzipFile(mode='wb+', fileobj=file)
+        for line in csv.reader(data_stream):
+            compressed_file.write((','.join(list(map(lambda x, y: str(x(y)), converter, line)))).encode())
+        file_name = compressed_file.name
+        compressed_file.close()
     return file_name
 
 

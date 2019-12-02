@@ -165,7 +165,6 @@ class AdWords:
             self._write_buffer(entry)
 
 
-
     def get_report(self, report_type, customer_id, exclude_fields=[],
                    exclude_terms=['Significance'], exclude_behavior=['Segment'],
                    include_fields=[], *args, **kwargs):
@@ -191,7 +190,6 @@ class AdWords:
         report_stream = rd.report(*args, **kwargs)
 
         if simple_download:
-
             return report_stream, fields
         else:
             raw_report = utils.gunzip(report_stream)
@@ -199,11 +197,10 @@ class AdWords:
                 field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
                 for field in fields if report_csv[field]['Type'] in MAPPERS
             }
-            report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
-
             if save_in_disk:
-                report = utils.save_csv_in_disk(report_iterator)
+                report = utils.save_report_in_disk(raw_report, fields, converter=converter)
             else:
+                report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
                 report = list(report_iterator())
             return report
 

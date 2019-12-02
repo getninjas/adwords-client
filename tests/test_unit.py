@@ -1106,3 +1106,4 @@ def test_sync_operations():
 def test_get_accounts():
     client = AdWords()
     client.get_accounts()
+
