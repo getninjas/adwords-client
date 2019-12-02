@@ -188,7 +188,7 @@ class AdWords:
         report_stream = rd.report(*args, **kwargs)
 
         if simple_download:
-            return report_stream
+            return report_stream, fields
         else:
             raw_report = utils.gunzip(report_stream)
             converter = {
