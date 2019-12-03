@@ -14,7 +14,7 @@ def save_report_in_disk(data_stream, fields, converter=None):
     with tempfile.NamedTemporaryFile(mode='wb+', delete=False) as file:
         compressed_file = gzip.GzipFile(mode='wb+', fileobj=file)
         for line in csv.reader(data_stream):
-            compressed_file.write((','.join(list(map(lambda x, y: str(x(y).replace('"', '""')), converter, line)))+'\n').encode())
+            compressed_file.write((','.join(list(map(lambda x, y: str(x(y)).replace('"', '""'), converter, line)))+'\n').encode())
         file_name = compressed_file.name
         compressed_file.close()
     return file_name
