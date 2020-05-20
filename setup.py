@@ -85,7 +85,7 @@ setup(
         'requests>=2.20.0',
         'suds-jurko>=0.6',
         'boto3>=1.4.4',
-        'httplib2<0.11.0',
+        'httplib2<0.19.0',
     ],
     python_requires='~=3.5',
     setup_requires=['pytest-runner'],
