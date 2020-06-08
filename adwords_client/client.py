@@ -169,7 +169,6 @@ class AdWords:
                    include_fields=[], *args, **kwargs):
         logger.info('Getting %s...', report_type)
         simple_download = kwargs.pop('simple_download', False)
-        save_in_disk = kwargs.pop('save_in_disk', False)
         only_fields = kwargs.pop('fields', None)
         report_csv = common.get_report_csv(report_type)
         report_csv = dict((item['Name'], item) for item in csv.DictReader(StringIO(report_csv)))
@@ -188,21 +187,17 @@ class AdWords:
 
         report_stream = rd.report(*args, **kwargs)
 
+        converter = {
+            field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
+            for field in fields if report_csv[field]['Type'] in MAPPERS
+        }
+
         if simple_download:
-            return report_stream, fields
+            return utils.save_report_in_disk(report_stream, fields, converter), fields
         else:
             raw_report = utils.gunzip(report_stream)
-            converter = {
-                field: MAPPERS.get(report_csv[field]['Type']).from_adwords_func
-                for field in fields if report_csv[field]['Type'] in MAPPERS
-            }
-            if save_in_disk:
-                file_name = utils.save_report_in_disk(raw_report, fields, converter=converter)
-                field_types = [report_csv[field]['Type'] for field in fields]
-                return file_name, fields, field_types
-            else:
-                report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
-                report = list(report_iterator())
+            report_iterator = utils.csv_reader(raw_report, fields, converter=converter)
+            report = list(report_iterator())
             return report
 
     def log_batchjob(self, batchjob_service, file_name, comment=''):

@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 def save_report_in_disk(data_stream, fields, converter=None):
     if converter:
         converter = [converter.get(field, lambda x: x) for field in fields]
-
     with tempfile.NamedTemporaryFile(mode='wb+', delete=False) as file:
         compressed_file = gzip.GzipFile(mode='wb+', fileobj=file)
         for line in csv.reader(data_stream):
-            compressed_file.write((','.join(list(map(lambda x, y: str(x(y)), converter, line)))+'\n').encode())
+            compressed_file.write(','.join([str(converter[idx](i)) for i, idx in enumerate(line.split(','))]))
+            # compressed_file.write((','.join(list(map(lambda x, y: str(x(y)), converter, line)))+'\n').encode())
         file_name = compressed_file.name
         compressed_file.close()
     return file_name
