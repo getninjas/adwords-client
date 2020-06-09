@@ -10,15 +10,14 @@ logger = logging.getLogger(__name__)
 def save_report_in_disk(compressed_stream, fields, converter=None):
     if converter:
         converter = [converter.get(field, lambda x: x) for field in fields]
-
-    with tempfile.NamedTemporaryFile(mode='wb+', delete=False) as file:
-        stream_compressed_file = gzip.GzipFile(mode='rb', fileobj=compressed_stream)
-        result_compressed_file = gzip.GzipFile(mode='wb', fileobj=file)
-        for line in stream_compressed_file:
-            decoded_line = line.decode()
-            result_compressed_file.write(','.join([str(converter[idx](i)) for idx, i in enumerate(decoded_line[:-1].split(','))]).encode())
-        stream_compressed_file.close()
-        return result_compressed_file.name
+    stream_compressed_file = gzip.GzipFile(mode='rb', fileobj=compressed_stream)
+    with tempfile.NamedTemporaryFile(mode='wb', delete=False) as file:
+        with gzip.GzipFile(mode='wb', fileobj=file) as result_compressed_file:
+            for line in stream_compressed_file:
+                decoded_line = line.decode()
+                result_compressed_file.write(','.join([str(converter[idx](i)) for idx, i in enumerate(decoded_line[:-1].split(','))]+['\n']).encode())
+            stream_compressed_file.close()
+            return result_compressed_file.name
 
 
 def gunzip(compressed_stream):
