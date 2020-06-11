@@ -9,6 +9,50 @@ def get_clicks_report(client, customer_id, *args, **kwargs):
     exclude_terms = kwargs.pop('exclude_terms', ['Significance'])
     exclude_behavior = kwargs.pop('exclude_behavior', ['Segment'])
     kwargs['include_zero_impressions'] = False
+    use_fields = kwargs.pop('fields', False)
+    if use_fields:
+        try:
+            kwargs['fields'] = list(use_fields)
+        except TypeError:
+            kwargs['fields'] = [
+                'AccountDescriptiveName',
+                'AdFormat',
+                'AdGroupId',
+                'AdGroupName',
+                'AdGroupStatus',
+                'AdNetworkType1',
+                'AdNetworkType2',
+                'AdVariationControlTrialArmId',
+                'AdVariationTreatmentTrialArmId',
+                'AdVariationTrialId',
+                'AoiCityCriteriaId',
+                'AoiCountryCriteriaId',
+                'AoiMetroCriteriaId',
+                'AoiMostSpecificTargetId',
+                'AoiRegionCriteriaId',
+                'CampaignId',
+                'CampaignLocationTargetId',
+                'CampaignName',
+                'CampaignStatus',
+                'ClickType',
+                'Clicks',
+                'CreativeId',
+                'CriteriaId',
+                'CriteriaParameters',
+                'Date',
+                'Device',
+                'ExternalCustomerId',
+                'GclId',
+                'KeywordMatchType',
+                'LopCityCriteriaId',
+                'LopCountryCriteriaId',
+                'LopMetroCriteriaId',
+                'LopMostSpecificTargetId',
+                'LopRegionCriteriaId',
+                'Page',
+                'Slot',
+                'UserListId'
+            ]
     return client.get_report(
         'CLICK_PERFORMANCE_REPORT',
         customer_id,
